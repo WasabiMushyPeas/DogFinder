@@ -1,0 +1,4 @@
+<resources>
+    <string name="mapbox_access_token">pk.eyJ1Ijoid2FzYWJpbXVzaHlwZWFzIiwiYSI6ImNsajF2a3BqNzE3enUzcXFsOHozYmRpaWUifQ.zugEoev6dXtKcPfgokWLkA</string>
+    <string name="app_name">DoggyFinderMapBox</string>
+</resources>
