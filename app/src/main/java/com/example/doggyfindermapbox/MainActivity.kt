@@ -8,9 +8,12 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.PopupWindow
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.mapbox.bindgen.Value
 import com.mapbox.common.NetworkRestriction
 import com.mapbox.common.TileRegionLoadOptions
+import com.mapbox.geojson.Point
 import com.mapbox.maps.GlyphsRasterizationMode
 import com.mapbox.maps.MapInitOptions
 import com.mapbox.maps.MapView
@@ -22,7 +25,15 @@ import com.mapbox.maps.plugin.locationcomponent.location
 
 var mapView: MapView? = null
 
+
+
+
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    // Current location of the user
+    private var currentLocation: Point? = null
 
 
 
@@ -30,6 +41,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        currentLocation = fusedLocationClient.lastLocation.result?.let {
+            Point.fromLngLat(it.longitude, it.latitude)
+        }
 
         findViewById<Button>(R.id.download_button)
             .setOnClickListener {

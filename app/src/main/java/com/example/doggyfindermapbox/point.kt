@@ -47,5 +47,22 @@ class point(var lat: Double, var long: Double, var time: String) {
         this.timestamp = time
     }
 
+    // Returns the distance between two points
+    fun distanceTo(point: point): Double {
+        val R = 6371e3; // metres
+        val φ1 = Math.toRadians(this.latitude)
+        val φ2 = Math.toRadians(point.latitude)
+        val Δφ = Math.toRadians(point.latitude-this.latitude)
+        val Δλ = Math.toRadians(point.longitude-this.longitude)
+
+        val a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+
+        val d = R * c
+
+        return d
+    }
 
 }
