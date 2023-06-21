@@ -25,6 +25,7 @@
             android:layout_column="2"
             android:layout_width="wrap_content"
             android:textSize="12sp"
+            android:id="@+id/location_text_view_distance"
             android:text="20m"></TextView>
     </TableRow>
     <TableRow>
@@ -44,11 +45,12 @@
             android:layout_column="1"
             android:layout_width="wrap_content"
             android:textSize="12sp"
-            android:text="Lat:"></TextView>
+            android:text="Dog Lat:"></TextView>
         <TextView
             android:layout_column="2"
             android:layout_width="wrap_content"
             android:textSize="12sp"
+            android:id="@+id/location_text_view_dog_lat"
             android:text="34.2039"></TextView>
     </TableRow>
     <TableRow>
@@ -56,12 +58,52 @@
             android:layout_column="1"
             android:layout_width="wrap_content"
             android:textSize="12sp"
-            android:text="Lon:"></TextView>
+            android:id="@+id/location_text_view_dog_long"
+            android:text="Dog Lon:"></TextView>
         <TextView
             android:layout_column="2"
             android:layout_width="wrap_content"
             android:textSize="12sp"
             android:text="-106.23498"></TextView>
+    </TableRow>
+    <TableRow>
+        <TextView
+            android:layout_column="1"
+            android:layout_width="wrap_content"
+            android:textSize="12sp"
+            android:text="User Lat:"></TextView>
+        <TextView
+            android:layout_column="2"
+            android:layout_width="wrap_content"
+            android:textSize="12sp"
+            android:id="@+id/location_text_view_user_lat"
+            android:text="34.2039"></TextView>
+    </TableRow>
+    <TableRow>
+        <TextView
+            android:layout_column="1"
+            android:layout_width="wrap_content"
+            android:textSize="12sp"
+            android:text="User Lon:"></TextView>
+        <TextView
+            android:layout_column="2"
+            android:layout_width="wrap_content"
+            android:textSize="12sp"
+            android:id="@+id/location_text_view_user_long"
+            android:text="-106.23498"></TextView>
+    </TableRow>
+    <TableRow>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:layout_column="1"
+            android:layout_margin="2dp"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            android:id="@+id/location_button"
+            android:text="Update Location"></Button>
     </TableRow>
     <TableRow>
         <TextView
@@ -73,10 +115,10 @@
         <TextView
             android:layout_column="1"
             android:layout_width="wrap_content"
-            android:textSize="12sp"
+            android:textSize="10sp"
             android:text="Zoom:"></TextView>
         <EditText
-            android:textSize="12sp"
+            android:textSize="10sp"
             android:layout_column="2"
             android:id="@+id/zoom_input"
             android:layout_height="wrap_content"
@@ -90,7 +132,11 @@
             android:layout_centerHorizontal="true"
             android:layout_centerVertical="true"
             android:layout_column="1"
+            android:layout_margin="2dp"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
             android:text="Download"></Button>
+
     </TableRow>
 </TableLayout>
 </RelativeLayout>
