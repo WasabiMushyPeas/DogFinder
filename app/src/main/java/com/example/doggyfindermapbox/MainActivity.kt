@@ -71,81 +71,81 @@ private const val STYLE_PACK_METADATA = "my-sat-style-pack"
 private const val TILE_REGION_METADATA = "my-sat-tile-region"
 
 
-val stylePackLoadOptions = StylePackLoadOptions.Builder()
-    .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
-    .metadata(Value(STYLE_PACK_METADATA))
-    .build()
+//val stylePackLoadOptions = StylePackLoadOptions.Builder()
+//    .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
+//    .metadata(Value(STYLE_PACK_METADATA))
+//    .build()
 
 
 
 
 class MainActivity : AppCompatActivity() {
 
-    //more offline map variables
-    val offlineManager: OfflineManager = OfflineManager(MapInitOptions.getDefaultResourceOptions(this))
-
-    val tilesetDescriptor = offlineManager.createTilesetDescriptor(
-        TilesetDescriptorOptions.Builder()
-            .styleURI(Style.SATELLITE_STREETS)
-            .minZoom(5)
-            .maxZoom(16)
-            .build()
-    )
-
-    val tileRegionLoadOptions = TileRegionLoadOptions.Builder()
-        .geometry(Point.fromLngLat(-31.952854, 115.857342))
-        .networkRestriction(NetworkRestriction.NONE)
-        .build()
-
-    val tileStore = TileStore.create().also {
-        // Set default access token for the created tile store instance
-        it.setOption(
-            TileStoreOptions.MAPBOX_ACCESS_TOKEN,
-            TileDataDomain.MAPS,
-            Value(getString(R.string.mapbox_access_token))
-        )
-    }
+//    //more offline map variables
+//    val offlineManager: OfflineManager = OfflineManager(MapInitOptions.getDefaultResourceOptions(this))
+//
+//    val tilesetDescriptor = offlineManager.createTilesetDescriptor(
+//        TilesetDescriptorOptions.Builder()
+//            .styleURI(Style.SATELLITE_STREETS)
+//            .minZoom(5)
+//            .maxZoom(16)
+//            .build()
+//    )
+//
+//    val tileRegionLoadOptions = TileRegionLoadOptions.Builder()
+//        .geometry(Point.fromLngLat(-31.952854, 115.857342))
+//        .networkRestriction(NetworkRestriction.NONE)
+//        .build()
+//
+//    val tileStore = TileStore.create().also {
+//        // Set default access token for the created tile store instance
+//        it.setOption(
+//            TileStoreOptions.MAPBOX_ACCESS_TOKEN,
+//            TileDataDomain.MAPS,
+//            Value(getString(R.string.mapbox_access_token))
+//        )
+//    }
 
 
     // Download offline map
 
-    // Download style pack
-    val stylePackCancelable = offlineManager.loadStylePack(
-        Style.OUTDOORS,
-        // Build Style pack load options
-        stylePackLoadOptions,
-        { progress ->
-            // Handle the download progress
-            // send toast message
-Toast.makeText(
-                this,
-                "Style pack download progress: ${progress}%",
-                Toast.LENGTH_LONG
-            ).show()
-        },
-        { expected ->
-            if (expected.isValue) {
-                expected.value?.let { stylePack ->
-                    // Style pack download finished successfully
-                    // send toast message
-                    Toast.makeText(
-                        this,
-                        "Style pack downloaded successfully",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
-            expected.error?.let {
-                // Handle errors that occurred during the style pack download.
-                // send toast message
-                Toast.makeText(
-                    this,
-                    "Style pack download failed",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-    )
+//    // Download style pack
+//    val stylePackCancelable = offlineManager.loadStylePack(
+//        Style.OUTDOORS,
+//        // Build Style pack load options
+//        stylePackLoadOptions,
+//        { progress ->
+//            // Handle the download progress
+//            // send toast message
+//Toast.makeText(
+//                this,
+//                "Style pack download progress: ${progress}%",
+//                Toast.LENGTH_LONG
+//            ).show()
+//        },
+//        { expected ->
+//            if (expected.isValue) {
+//                expected.value?.let { stylePack ->
+//                    // Style pack download finished successfully
+//                    // send toast message
+//                    Toast.makeText(
+//                        this,
+//                        "Style pack downloaded successfully",
+//                        Toast.LENGTH_LONG
+//                    ).show()
+//                }
+//            }
+//            expected.error?.let {
+//                // Handle errors that occurred during the style pack download.
+//                // send toast message
+//                Toast.makeText(
+//                    this,
+//                    "Style pack download failed",
+//                    Toast.LENGTH_LONG
+//                ).show()
+//            }
+//        }
+//    )
 
 
 
@@ -269,36 +269,36 @@ Toast.makeText(
 
             downloadPoint = Point.fromLngLat(long, lat)
 
-            // Download tile region
-            val tileRegionCancelable = tileStore.loadTileRegion(
-                TILE_REGION_ID,
-                TileRegionLoadOptions.Builder()
-                    .geometry(downloadPoint)
-                    .descriptors(listOf(tilesetDescriptor))
-                    .metadata(Value(TILE_REGION_METADATA))
-                    .acceptExpired(true)
-                    .networkRestriction(NetworkRestriction.NONE)
-                    .build(),
-                { progress ->
-                    // Handle the download progress
-                    // send toast message
-                    Toast.makeText(
-                        this,
-                        "Tile region download progress: ${progress}%",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            ) { expected ->
-                if (expected.isValue) {
-                    // Tile region download finishes successfully
-                    // send toast message
-                    Toast.makeText(
-                        this,
-                        "Tile region downloaded successfully",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
+//            // Download tile region
+//            val tileRegionCancelable = tileStore.loadTileRegion(
+//                TILE_REGION_ID,
+//                TileRegionLoadOptions.Builder()
+//                    .geometry(downloadPoint)
+//                    .descriptors(listOf(tilesetDescriptor))
+//                    .metadata(Value(TILE_REGION_METADATA))
+//                    .acceptExpired(true)
+//                    .networkRestriction(NetworkRestriction.NONE)
+//                    .build(),
+//                { progress ->
+//                    // Handle the download progress
+//                    // send toast message
+//                    Toast.makeText(
+//                        this,
+//                        "Tile region download progress: ${progress}%",
+//                        Toast.LENGTH_LONG
+//                    ).show()
+//                }
+//            ) { expected ->
+//                if (expected.isValue) {
+//                    // Tile region download finishes successfully
+//                    // send toast message
+//                    Toast.makeText(
+//                        this,
+//                        "Tile region downloaded successfully",
+//                        Toast.LENGTH_LONG
+//                    ).show()
+//                }
+//            }
 
         }
     }
