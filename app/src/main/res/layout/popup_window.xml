@@ -58,12 +58,12 @@
             android:layout_column="1"
             android:layout_width="wrap_content"
             android:textSize="12sp"
-            android:id="@+id/location_text_view_dog_long"
             android:text="Dog Lon:"></TextView>
         <TextView
             android:layout_column="2"
             android:layout_width="wrap_content"
             android:textSize="12sp"
+            android:id="@+id/location_text_view_dog_long"
             android:text="-106.23498"></TextView>
     </TableRow>
     <TableRow>
@@ -115,7 +115,7 @@
         <TextView
             android:layout_column="1"
             android:layout_width="wrap_content"
-            android:textSize="10sp"
+            android:textSize="12sp"
             android:text="Zoom:"></TextView>
         <EditText
             android:textSize="10sp"
@@ -123,13 +123,14 @@
             android:id="@+id/zoom_input"
             android:layout_height="wrap_content"
             android:layout_width="match_parent"
+
             android:inputType="text"/>
     </TableRow>
     <TableRow>
         <TextView
             android:layout_column="1"
             android:layout_width="wrap_content"
-            android:textSize="10sp"
+            android:textSize="12sp"
             android:text="Lat:"></TextView>
         <EditText
             android:textSize="10sp"
@@ -143,7 +144,7 @@
         <TextView
             android:layout_column="1"
             android:layout_width="wrap_content"
-            android:textSize="10sp"
+            android:textSize="12sp"
             android:text="Long:"></TextView>
         <EditText
             android:textSize="10sp"

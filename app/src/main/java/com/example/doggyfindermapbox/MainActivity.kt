@@ -1,7 +1,12 @@
 package com.example.doggyfindermapbox
 
+import android.content.Context
 import android.content.Context.LAYOUT_INFLATER_SERVICE
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
@@ -14,7 +19,9 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat.getSystemService
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -33,12 +40,16 @@ import com.mapbox.maps.OfflineManager
 import com.mapbox.maps.Style
 import com.mapbox.maps.StylePackLoadOptions
 import com.mapbox.maps.TilesetDescriptorOptions
+import com.mapbox.maps.extension.style.layers.properties.generated.CircleTranslateAnchor
 import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.CircleAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createCircleAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
 import com.mapbox.maps.plugin.locationcomponent.location
 import kotlin.math.acos
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 var mapView: MapView? = null
@@ -60,92 +71,23 @@ private var downloadButton: Button? = null
 private var fusedLocationProviderClient: FusedLocationProviderClient? = null
 private var currentLocation: Location? = null
 private var dogLocation: Location? = null
-val annotationApi = mapView?.annotations
-val circleAnnotationManager = mapView?.let { annotationApi?.createCircleAnnotationManager(it) }
+private var distance: Double? = 0.0
+// Add the resulting circle to the map.
 
 
-// offline map variables
-private var downloadPoint: Point = Point.fromLngLat(139.769305, 35.682027)
-private const val TILE_REGION_ID = "CurrentRegion"
-private const val STYLE_PACK_METADATA = "my-sat-style-pack"
-private const val TILE_REGION_METADATA = "my-sat-tile-region"
 
 
-//val stylePackLoadOptions = StylePackLoadOptions.Builder()
-//    .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
-//    .metadata(Value(STYLE_PACK_METADATA))
-//    .build()
+
+
+
+
 
 
 
 
 class MainActivity : AppCompatActivity() {
 
-//    //more offline map variables
-//    val offlineManager: OfflineManager = OfflineManager(MapInitOptions.getDefaultResourceOptions(this))
-//
-//    val tilesetDescriptor = offlineManager.createTilesetDescriptor(
-//        TilesetDescriptorOptions.Builder()
-//            .styleURI(Style.SATELLITE_STREETS)
-//            .minZoom(5)
-//            .maxZoom(16)
-//            .build()
-//    )
-//
-//    val tileRegionLoadOptions = TileRegionLoadOptions.Builder()
-//        .geometry(Point.fromLngLat(-31.952854, 115.857342))
-//        .networkRestriction(NetworkRestriction.NONE)
-//        .build()
-//
-//    val tileStore = TileStore.create().also {
-//        // Set default access token for the created tile store instance
-//        it.setOption(
-//            TileStoreOptions.MAPBOX_ACCESS_TOKEN,
-//            TileDataDomain.MAPS,
-//            Value(getString(R.string.mapbox_access_token))
-//        )
-//    }
 
-
-    // Download offline map
-
-//    // Download style pack
-//    val stylePackCancelable = offlineManager.loadStylePack(
-//        Style.OUTDOORS,
-//        // Build Style pack load options
-//        stylePackLoadOptions,
-//        { progress ->
-//            // Handle the download progress
-//            // send toast message
-//Toast.makeText(
-//                this,
-//                "Style pack download progress: ${progress}%",
-//                Toast.LENGTH_LONG
-//            ).show()
-//        },
-//        { expected ->
-//            if (expected.isValue) {
-//                expected.value?.let { stylePack ->
-//                    // Style pack download finished successfully
-//                    // send toast message
-//                    Toast.makeText(
-//                        this,
-//                        "Style pack downloaded successfully",
-//                        Toast.LENGTH_LONG
-//                    ).show()
-//                }
-//            }
-//            expected.error?.let {
-//                // Handle errors that occurred during the style pack download.
-//                // send toast message
-//                Toast.makeText(
-//                    this,
-//                    "Style pack download failed",
-//                    Toast.LENGTH_LONG
-//                ).show()
-//            }
-//        }
-//    )
 
 
 
@@ -157,8 +99,9 @@ class MainActivity : AppCompatActivity() {
 
         // Set dog location to random lat and long
         dogLocation = Location("")
-        dogLocation?.latitude = -31.952854
-        dogLocation?.longitude = 115.857342
+        dogLocation?.latitude = 35.144687
+        dogLocation?.longitude = -106.651482
+
 
         // Initialize location views and button variables
 
@@ -180,10 +123,10 @@ class MainActivity : AppCompatActivity() {
                         enabled = true
                         pulsingEnabled = true
                     }
+                    //addAnnotationToMap()
                 }
             }
         )
-
 
     }
 
@@ -227,25 +170,17 @@ class MainActivity : AppCompatActivity() {
                         .zoom(15.0)
                         .build()
                     mapView?.getMapboxMap()?.setCamera(cameraPosition)
+                    // move maker marker to dog location
+                    addAnnotationToMap(dogLocation?.latitude!!, dogLocation?.longitude!!)
 
-                    // add a marker at dog location=
-                    val circleAnnotationOptions: CircleAnnotationOptions = CircleAnnotationOptions()
-                        // Define a geographic coordinate.
-                        .withPoint(Point.fromLngLat(dogLocation?.longitude!!, dogLocation?.latitude!!))
-                        // Style the circle that will be added to the map.
-                        .withCircleRadius(5.0)
-                        .withCircleColor("#bd93f9")
-                        .withCircleStrokeWidth(1.0)
-                        .withCircleStrokeColor("#44475a")
-                    // Add the circle to the map.
-                    circleAnnotationManager?.create(circleAnnotationOptions)
+
 
 
                     // Calculate distance between user and dog
-                    var distance = distance(currentLocation.latitude(), currentLocation.longitude(), dogLocation?.latitude!!, dogLocation?.longitude!!)
+                    distance = distance(currentLocation.latitude(), currentLocation.longitude(), dogLocation?.latitude!!, dogLocation?.longitude!!)
 
-                    // Update distance text view
-                    locationTextViewDistance?.text = (distance.toString() + " meters")
+                    // Update distance text view rounded
+                    locationTextViewDistance?.text = distance!!.roundToInt().toString() + "m"
                 } else {
                     // Send toast to user to enable GPS
                     Toast.makeText(this, "Please enable GPS", Toast.LENGTH_SHORT).show()
@@ -267,38 +202,6 @@ class MainActivity : AppCompatActivity() {
             var lat = inputEditTextLat?.text.toString().toDouble()
             var long = inputEditTextLong?.text.toString().toDouble()
 
-            downloadPoint = Point.fromLngLat(long, lat)
-
-//            // Download tile region
-//            val tileRegionCancelable = tileStore.loadTileRegion(
-//                TILE_REGION_ID,
-//                TileRegionLoadOptions.Builder()
-//                    .geometry(downloadPoint)
-//                    .descriptors(listOf(tilesetDescriptor))
-//                    .metadata(Value(TILE_REGION_METADATA))
-//                    .acceptExpired(true)
-//                    .networkRestriction(NetworkRestriction.NONE)
-//                    .build(),
-//                { progress ->
-//                    // Handle the download progress
-//                    // send toast message
-//                    Toast.makeText(
-//                        this,
-//                        "Tile region download progress: ${progress}%",
-//                        Toast.LENGTH_LONG
-//                    ).show()
-//                }
-//            ) { expected ->
-//                if (expected.isValue) {
-//                    // Tile region download finishes successfully
-//                    // send toast message
-//                    Toast.makeText(
-//                        this,
-//                        "Tile region downloaded successfully",
-//                        Toast.LENGTH_LONG
-//                    ).show()
-//                }
-//            }
 
         }
     }
@@ -356,6 +259,11 @@ class MainActivity : AppCompatActivity() {
         downloadButton = popupView.findViewById(R.id.download_button)
         locationButton = popupView.findViewById(R.id.location_button)
 
+        locationTextViewDistance?.text = distance?.roundToInt().toString() + "m"
+        locationTextViewDogLat?.text = dogLocation?.latitude.toString()
+        locationTextViewDogLong?.text = dogLocation?.longitude.toString()
+
+
         // Set location button on click listener
         locationButton?.setOnClickListener {
             onButtonUpdateLocationClick(locationButton!!)
@@ -389,6 +297,50 @@ class MainActivity : AppCompatActivity() {
         dist *= 60 * 1.1515
         dist *= 1609.344
         return dist
+    }
+
+
+    private fun addAnnotationToMap(lat: Double, long: Double) {
+// Create an instance of the Annotation API and get the PointAnnotationManager.
+        bitmapFromDrawableRes(
+            this@MainActivity,
+            R.drawable.red_marker
+        )?.let {
+            val annotationApi = mapView?.annotations
+            val pointAnnotationManager = annotationApi?.createPointAnnotationManager(mapView!!)
+// Set options for the resulting symbol layer.
+            val pointAnnotationOptions: PointAnnotationOptions = PointAnnotationOptions()
+// Define a geographic coordinate.
+                .withPoint(Point.fromLngLat(long, lat))
+// Specify the bitmap you assigned to the point annotation
+// The bitmap will be added to map style automatically.
+                .withIconImage(it)
+// Add the resulting pointAnnotation to the map.
+            pointAnnotationManager?.create(pointAnnotationOptions)
+        }
+    }
+    private fun bitmapFromDrawableRes(context: Context, @DrawableRes resourceId: Int) =
+        convertDrawableToBitmap(AppCompatResources.getDrawable(context, resourceId))
+
+    private fun convertDrawableToBitmap(sourceDrawable: Drawable?): Bitmap? {
+        if (sourceDrawable == null) {
+            return null
+        }
+        return if (sourceDrawable is BitmapDrawable) {
+            sourceDrawable.bitmap
+        } else {
+// copying drawable object to not manipulate on the same reference
+            val constantState = sourceDrawable.constantState ?: return null
+            val drawable = constantState.newDrawable().mutate()
+            val bitmap: Bitmap = Bitmap.createBitmap(
+                drawable.intrinsicWidth, drawable.intrinsicHeight,
+                Bitmap.Config.ARGB_8888
+            )
+            val canvas = Canvas(bitmap)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+            bitmap
+        }
     }
 
 
