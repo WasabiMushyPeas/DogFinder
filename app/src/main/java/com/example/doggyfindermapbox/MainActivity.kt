@@ -1,20 +1,31 @@
 package com.example.doggyfindermapbox
 
 import android.content.Context
-import android.content.Context.LAYOUT_INFLATER_SERVICE
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
+import android.os.Handler
+import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
+import android.view.View.OnTouchListener
+import android.view.ViewConfiguration
+import android.view.animation.Animation
+import android.view.animation.RotateAnimation
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextView
@@ -23,34 +34,20 @@ import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat.getSystemService
 import com.google.android.gms.location.FusedLocationProviderClient
-import com.mapbox.bindgen.Value
-import com.mapbox.common.NetworkRestriction
-import com.mapbox.common.TileDataDomain
-import com.mapbox.common.TileRegionLoadOptions
-import com.mapbox.common.TileStore
-import com.mapbox.common.TileStoreOptions
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
-import com.mapbox.maps.GlyphsRasterizationMode
-import com.mapbox.maps.MapInitOptions
 import com.mapbox.maps.MapView
-import com.mapbox.maps.OfflineManager
 import com.mapbox.maps.Style
-import com.mapbox.maps.StylePackLoadOptions
-import com.mapbox.maps.TilesetDescriptorOptions
-import com.mapbox.maps.extension.style.layers.properties.generated.CircleTranslateAnchor
 import com.mapbox.maps.plugin.annotation.annotations
-import com.mapbox.maps.plugin.annotation.generated.CircleAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
-import com.mapbox.maps.plugin.annotation.generated.createCircleAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
 import com.mapbox.maps.plugin.locationcomponent.location
 import kotlin.math.acos
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+
 
 var mapView: MapView? = null
 
@@ -66,13 +63,13 @@ private var inputEditTextLat: EditText? = null
 private var inputEditTextLong: EditText? = null
 private var locationButton: Button? = null
 private var downloadButton: Button? = null
+private var compassButton: Button? = null
 
 // Location variables
 private var fusedLocationProviderClient: FusedLocationProviderClient? = null
 private var currentLocation: Location? = null
 private var dogLocation: Location? = null
 private var distance: Double? = 0.0
-// Add the resulting circle to the map.
 
 
 
@@ -85,10 +82,16 @@ private var distance: Double? = 0.0
 
 
 
-class MainActivity : AppCompatActivity() {
 
+// Implement SensorEventListener
 
-
+class MainActivity : AppCompatActivity(), SensorEventListener {
+    // Compass variables
+    private var image: ImageView? = null
+    private var currentDegree = 0f
+    var mSensorManager: SensorManager? = null
+    var tvHeading: TextView? = null
+    var isCompassOpen = false
 
 
 
@@ -113,6 +116,7 @@ class MainActivity : AppCompatActivity() {
 
 
 
+
         mapView = findViewById(R.id.mapView)
         mapView?.getMapboxMap()?.loadStyleUri(
             Style.SATELLITE_STREETS,
@@ -123,10 +127,84 @@ class MainActivity : AppCompatActivity() {
                         enabled = true
                         pulsingEnabled = true
                     }
-                    //addAnnotationToMap()
+
                 }
             }
         )
+
+
+
+
+
+        // initialize your android device sensor capabilities
+        mSensorManager = getSystemService(SENSOR_SERVICE) as SensorManager?;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        var view = findViewById<View>(R.id.download_button)
+
+        view.setOnTouchListener(object : OnTouchListener {
+            var handler = Handler()
+            var numberOfTaps = 0
+            var lastTapTimeMs: Long = 0
+            var touchDownMs: Long = 0
+            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> touchDownMs = System.currentTimeMillis()
+                    MotionEvent.ACTION_UP -> {
+                        handler.removeCallbacksAndMessages(null)
+                        if (System.currentTimeMillis() - touchDownMs > ViewConfiguration.getTapTimeout()) {
+                            //it was not a tap
+                            numberOfTaps = 0
+                            lastTapTimeMs = 0
+                        }
+                        if (numberOfTaps > 0
+                            && System.currentTimeMillis() - lastTapTimeMs < ViewConfiguration.getDoubleTapTimeout()
+                        ) {
+                            numberOfTaps += 1
+                        } else {
+                            numberOfTaps = 1
+                        }
+                        lastTapTimeMs = System.currentTimeMillis()
+                        if (numberOfTaps == 3) {
+                            onButtonCompassClick(findViewById(R.id.download_button))
+                            //handle triple tap
+                        } else if (numberOfTaps == 2) {
+                            handler.postDelayed({ //handle double tap
+                                onButtonShowPopupWindowClick(findViewById(R.id.download_button))
+                            }, ViewConfiguration.getDoubleTapTimeout().toLong())
+                        }
+                    }
+                }
+                return true
+            }
+        })
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     }
 
@@ -276,8 +354,52 @@ class MainActivity : AppCompatActivity() {
 
 
 
+
+
         // dismiss the popup window when touched
         popupView.setOnTouchListener { v, event ->
+            popupWindow.dismiss()
+            true
+        }
+
+    }
+
+    private fun onButtonCompassClick(view: View?) {
+        // inflate the layout of the popup window
+        val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val popupView: View = inflater.inflate(R.layout.compas_window, null)
+
+        // create the popup window
+        val width = LinearLayout.LayoutParams.WRAP_CONTENT
+        val height = LinearLayout.LayoutParams.WRAP_CONTENT
+        val focusable = true // lets taps outside the popup also dismiss it
+        val popupWindow = PopupWindow(popupView, width, height, focusable)
+
+        // show the popup window
+        // which view you pass in doesn't matter, it is only used for the window tolken
+        popupWindow.showAtLocation(view, Gravity.CENTER, 0, 0)
+
+
+
+
+
+        image = popupView.findViewById(R.id.imageViewCompass)
+
+        tvHeading = popupView.findViewById(R.id.tvHeading)
+
+        // Log image view height and width and tvHeading text
+        Log.d("image height", image?.height.toString())
+        Log.d("image width", image?.width.toString())
+        Log.d("tvHeading", tvHeading?.text.toString())
+
+
+
+        isCompassOpen = true
+
+
+        // dismiss the popup window when touched
+        popupView.setOnTouchListener { v, event ->
+            isCompassOpen = false
             popupWindow.dismiss()
             true
         }
@@ -341,6 +463,71 @@ class MainActivity : AppCompatActivity() {
             drawable.draw(canvas)
             bitmap
         }
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (isCompassOpen && tvHeading != null && image != null) {
+
+            // get the angle around the z-axis rotated
+
+            // get the angle around the z-axis rotated
+            val degree = Math.round(event!!.values[0]).toFloat()
+
+            tvHeading!!.text = "Heading: " + java.lang.Float.toString(degree) + " degrees"
+
+            // create a rotation animation (reverse turn degree degrees)
+
+            // create a rotation animation (reverse turn degree degrees)
+            val ra = RotateAnimation(
+                currentDegree,
+                -degree,
+                Animation.RELATIVE_TO_SELF, 0.5f,
+                Animation.RELATIVE_TO_SELF,
+                0.5f
+            )
+
+            // how long the animation will take place
+
+            // how long the animation will take place
+            ra.duration = 210
+
+            // set the animation after the end of the reservation status
+
+            // set the animation after the end of the reservation status
+            ra.fillAfter = true
+
+            // Start the animation
+
+            // Start the animation
+            image!!.startAnimation(ra)
+            currentDegree = -degree
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+            // toast message
+            Toast.makeText(this, "Compass accuracy changed", Toast.LENGTH_SHORT).show()
+
+    }
+    override fun onResume() {
+        super.onResume()
+
+
+            // for the system's orientation sensor registered listeners
+            mSensorManager!!.registerListener(
+                this, mSensorManager!!.getDefaultSensor(Sensor.TYPE_ORIENTATION),
+                SensorManager.SENSOR_DELAY_GAME
+            )
+
+    }
+
+    override fun onPause() {
+
+            super.onPause()
+
+            // to stop the listener and save battery
+            mSensorManager!!.unregisterListener(this)
+
     }
 
 
