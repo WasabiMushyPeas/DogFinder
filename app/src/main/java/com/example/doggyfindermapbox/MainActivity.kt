@@ -44,7 +44,9 @@ import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
 import com.mapbox.maps.plugin.locationcomponent.location
 import kotlin.math.acos
+import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.round
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -91,6 +93,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var currentDegree = 0f
     var mSensorManager: SensorManager? = null
     var tvHeading: TextView? = null
+    var tvDistance: TextView? = null
     var isCompassOpen = false
 
 
@@ -386,11 +389,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         image = popupView.findViewById(R.id.imageViewCompass)
 
         tvHeading = popupView.findViewById(R.id.tvHeading)
+        tvDistance = popupView.findViewById(R.id.tvDistance)
 
-        // Log image view height and width and tvHeading text
-        Log.d("image height", image?.height.toString())
-        Log.d("image width", image?.width.toString())
-        Log.d("tvHeading", tvHeading?.text.toString())
 
 
 
@@ -419,6 +419,56 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         dist *= 60 * 1.1515
         dist *= 1609.344
         return dist
+    }
+
+    // Function called compute heading that takes in two lat/long doubles and compass heading and returns the heading
+    fun computeHeading(lat1: Double, lon1: Double, lat2: Double, lon2: Double, heading: Float): Double? {
+        val dLon = lon2 - lon1
+        val y = sin(dLon) * cos(lat2)
+        val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+        var brng = Math.toDegrees(atan2(y, x))
+        brng = 360 - (brng + 360) % 360
+        return (brng - heading).toDouble()
+    }
+
+
+
+    fun updateGPS(){
+        // Check android version
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            // Check if permission to access location is granted
+            if (ActivityCompat.checkSelfPermission(
+                    this,
+                    android.Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                // If permission not granted, request permission
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
+                    1
+                )
+            } else {
+                // If permission granted, get location
+                // Check if GPS is enabled
+                val locationManager =
+                    getSystemService(LOCATION_SERVICE) as LocationManager
+                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                    // Set current location to location variable
+                    currentLocation =
+                        locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+
+
+
+                    var currentLocation =
+                        Point.fromLngLat(currentLocation?.longitude!!, currentLocation?.latitude!!)
+
+                } else {
+                    // Send toast to user to enable GPS
+                    Toast.makeText(this, "Please enable GPS", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
 
@@ -467,24 +517,57 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (isCompassOpen && tvHeading != null && image != null) {
+            var heading: Double? = 0.0
+
+            updateGPS()
+
+            // calculate the heading in degrees from your current location to the dog's location
+            if(currentLocation != null && dogLocation != null){
+                heading = computeHeading(
+                    currentLocation!!.latitude,
+                    currentLocation!!.longitude,
+                    dogLocation!!.latitude,
+                    dogLocation!!.longitude,
+                    event!!.values[0])
+            }
+            var dist = distance(
+                currentLocation!!.latitude,
+                currentLocation!!.longitude,
+                dogLocation!!.latitude,
+                dogLocation!!.longitude
+            )
+
+            // round the heading to the nearest degree tenth of a degree
+            heading = heading?.let { round(it * 10) / 10 }
+            // round distance to the nearest tenth of a meter
+            dist = round(dist * 10) / 10
+
 
             // get the angle around the z-axis rotated
 
-            // get the angle around the z-axis rotated
-            val degree = Math.round(event!!.values[0]).toFloat()
 
-            tvHeading!!.text = "Heading: " + java.lang.Float.toString(degree) + " degrees"
+            tvHeading!!.text = "Heading: " + heading?.let { java.lang.Double.toString(it) } + " degrees"
+            // update tvDistance with the distance between the current location and the dog's location
+            tvDistance!!.text = "Distance: " + dist.toString() + " meters"
 
-            // create a rotation animation (reverse turn degree degrees)
 
-            // create a rotation animation (reverse turn degree degrees)
+
+
+            // create a rotation animation to point to the dog's location
             val ra = RotateAnimation(
                 currentDegree,
-                -degree,
+                heading!!.toFloat(),
                 Animation.RELATIVE_TO_SELF, 0.5f,
                 Animation.RELATIVE_TO_SELF,
                 0.5f
             )
+//            val ra = RotateAnimation(
+//                currentDegree,
+//                (-heading!!).toFloat(),
+//                Animation.RELATIVE_TO_SELF, 0.5f,
+//                Animation.RELATIVE_TO_SELF,
+//                0.5f
+//            )
 
             // how long the animation will take place
 
@@ -500,7 +583,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
             // Start the animation
             image!!.startAnimation(ra)
-            currentDegree = -degree
+            currentDegree = heading.toFloat()
         }
     }
 
