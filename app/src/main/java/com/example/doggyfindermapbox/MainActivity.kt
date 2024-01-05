@@ -35,14 +35,29 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.mapbox.bindgen.Value
+import com.mapbox.common.NetworkRestriction
+import com.mapbox.common.TileDataDomain
+import com.mapbox.common.TileRegionLoadOptions
+import com.mapbox.common.TileStore
+import com.mapbox.common.TileStoreOptions
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
+import com.mapbox.maps.GlyphsRasterizationMode
+import com.mapbox.maps.MapInitOptions
 import com.mapbox.maps.MapView
+import com.mapbox.maps.OfflineManager
 import com.mapbox.maps.Style
+import com.mapbox.maps.StylePackLoadOptions
+import com.mapbox.maps.TilesetDescriptorOptions
 import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
 import com.mapbox.maps.plugin.locationcomponent.location
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import kotlin.math.acos
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -271,21 +286,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     }
 
-    // on button click, download offline map
-    private fun onButtonDownloadClick(locationButton: Button) {
-        // Check to see if the edit text inputs are empty
-        if(inputEditTextZoom?.text?.isEmpty() == true || inputEditTextLat?.text?.isEmpty() == true || inputEditTextLong?.text?.isEmpty() == true){
-            // Send toast to user to enter values
-            Toast.makeText(this, "Please enter values", Toast.LENGTH_SHORT).show()
-        } else {
-            // Set zoom, lat and long to edit text values
-            var zoom = inputEditTextZoom?.text.toString().toDouble()
-            var lat = inputEditTextLat?.text.toString().toDouble()
-            var long = inputEditTextLong?.text.toString().toDouble()
 
-
-        }
-    }
 
 
 
@@ -310,6 +311,157 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         super.onDestroy()
         mapView?.onDestroy()
     }
+
+
+
+    // on button click, download offline map
+    private fun onButtonDownloadClick(locationButton: Button) {
+        // Check to see if the edit text inputs are empty
+        if(inputEditTextZoom?.text?.isEmpty() == true || inputEditTextLat?.text?.isEmpty() == true || inputEditTextLong?.text?.isEmpty() == true){
+            // Send toast to user to enter values
+            Toast.makeText(this, "Please enter values", Toast.LENGTH_SHORT).show()
+        } else {
+            // Set zoom, lat and long to edit text values
+            var zoom = inputEditTextZoom?.text.toString().toDouble()
+            var lat = inputEditTextLat?.text.toString().toDouble()
+            var long = inputEditTextLong?.text.toString().toDouble()
+
+
+            var currentTime: Date = Calendar.getInstance().getTime()
+            var currentDate: String = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(currentTime)
+            // Define download location current location
+            var downloadLocation: Point = Point.fromLngLat(currentLocation?.longitude!!, currentLocation?.latitude!!)
+
+            var MetadataID = currentTime.toString() + "_" + currentDate.toString() + "_" + zoom.toString() + "_" + lat.toString() + "_" + long.toString()
+
+            // log variables to console
+            Log.d("Download", "Zoom: " + zoom.toString())
+            Log.d("Download", "Lat: " + lat.toString())
+            Log.d("Download", "Long: " + long.toString())
+            Log.d("Download", "MetadataID: " + MetadataID.toString())
+            Log.d("Download", "DownloadLocation: " + downloadLocation.toString())
+
+
+            // Define Style Pack
+            val stylePackLoadOptions = StylePackLoadOptions.Builder()
+                .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
+                .metadata(Value(MetadataID+"_StylePack"))
+                .build()
+
+            // Define tileset descriptor and tile region
+            val offlineManager: OfflineManager = OfflineManager(MapInitOptions.getDefaultResourceOptions(this))
+
+            val tilesetDescriptor = offlineManager.createTilesetDescriptor(
+                TilesetDescriptorOptions.Builder()
+                    .styleURI(Style.SATELLITE_STREETS)
+                    .minZoom(0)
+                    .maxZoom(16)
+                    .build()
+            )
+            val tileRegionLoadOptions = TileRegionLoadOptions.Builder()
+                .geometry(downloadLocation)
+                .descriptors(listOf(tilesetDescriptor))
+                .metadata(Value(MetadataID+"_TileRegion"))
+                .acceptExpired(true)
+                .networkRestriction(NetworkRestriction.NONE)
+                .build()
+
+
+            val stylePackCancelable = offlineManager.loadStylePack(
+                Style.SATELLITE_STREETS,
+                // Build Style pack load options
+                stylePackLoadOptions,
+                { progress ->
+                    // Handle the download progress using toasts and log statements
+                    Toast.makeText(
+                        this,
+                        "Style pack download progress: ${progress}%",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    Log.d("Download", "Style pack download progress: ${progress}%")
+
+                },
+                { expected ->
+                    if (expected.isValue) {
+                        expected.value?.let { stylePack ->
+                            // Style pack download finished successfully using toasts
+                            Toast.makeText(
+                                this,
+                                "Style pack downloaded successfully",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            Log.d("Download", "Style pack downloaded successfully")
+                        }
+                    }
+                    expected.error?.let {
+                        // Handle errors that occurred during the style pack download using toasts
+                        Toast.makeText(
+                            this,
+                            "Style pack download error: ${it.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        Log.d("Download", "Style pack download error: ${it.message}")
+                    }
+                }
+            )
+
+            Log.d("Download", "Style pack load options: " + stylePackLoadOptions.toString())
+            val tileStore = TileStore.create().also {
+                // Set default access token for the created tile store instance
+                it.setOption(
+                    TileStoreOptions.MAPBOX_ACCESS_TOKEN,
+                    TileDataDomain.MAPS,
+                    Value(getString(R.string.mapbox_access_token))
+                )
+            }
+            val tileRegionCancelable = tileStore.loadTileRegion(
+                (MetadataID+"_TileRegionID"),
+                TileRegionLoadOptions.Builder()
+                    .geometry(downloadLocation)
+                    .descriptors(listOf(tilesetDescriptor))
+                    .metadata(Value(MetadataID+"_TileRegion"))
+                    .acceptExpired(true)
+                    .networkRestriction(NetworkRestriction.NONE)
+                    .build(),
+                { progress ->
+                    // Handle the download progress using toasts
+                    Toast.makeText(
+                        this,
+                        "Tile region download progress: ${progress}%",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    Log.d("Download", "Tile region download progress: ${progress}%")
+                }
+            ) { expected ->
+                if (expected.isValue) {
+                    // Tile region download finishes successfully using toasts
+                    Toast.makeText(
+                        this,
+                        "Tile region downloaded successfully",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    Log.d("Download", "Tile region downloaded successfully")
+                }
+                expected.error?.let {
+                    // Handle errors that occurred during the tile region download using toasts
+                    Toast.makeText(
+                        this,
+                        "Tile region download error: ${it.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    Log.d("Download", "Tile region download error: ${it.message}")
+                }
+            }
+
+        }
+        Log.d("Download", "Download finished")
+
+
+    }
+
+
+
+
 
 
     fun onButtonShowPopupWindowClick(view: View?) {
