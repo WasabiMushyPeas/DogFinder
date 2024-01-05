@@ -89,29 +89,16 @@ private var dogLocation: Location? = null
 private var distance: Double? = 0.0
 
 
-
-
-
-
-
-
-
-
-
-
-
 // Implement SensorEventListener
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
     // Compass variables
     private var image: ImageView? = null
     private var currentDegree = 0f
-    var mSensorManager: SensorManager? = null
-    var tvHeading: TextView? = null
-    var tvDistance: TextView? = null
-    var isCompassOpen = false
-
-
+    private var mSensorManager: SensorManager? = null
+    private var tvHeading: TextView? = null
+    private var tvDistance: TextView? = null
+    private var isCompassOpen = false
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -137,39 +124,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         mapView = findViewById(R.id.mapView)
         mapView?.getMapboxMap()?.loadStyleUri(
-            Style.SATELLITE_STREETS,
-            // After the style is loaded, initialize the Location component.
-            object : Style.OnStyleLoaded {
-                override fun onStyleLoaded(style: Style) {
-                    mapView?.location?.updateSettings {
-                        enabled = true
-                        pulsingEnabled = true
-                    }
-
-                }
-            }
+            Style.SATELLITE_STREETS
         )
-
-
-
+        // After the style is loaded, initialize the Location component.
+        {
+            mapView?.location?.updateSettings {
+                enabled = true
+                pulsingEnabled = true
+            }
+        }
 
 
         // initialize your android device sensor capabilities
         mSensorManager = getSystemService(SENSOR_SERVICE) as SensorManager?;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
         var view = findViewById<View>(R.id.download_button)
@@ -212,84 +179,68 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         })
 
 
-
-
-
-
-
-
-
-
-
-
-
-
     }
 
     private fun onButtonUpdateLocationClick(locationButton: Button) {
         // Check android version
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            // Check if permission to access location is granted
-            if (ActivityCompat.checkSelfPermission(
-                    this,
-                    android.Manifest.permission.ACCESS_FINE_LOCATION
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                // If permission not granted, request permission
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
-                    1
+        // Check if permission to access location is granted
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // If permission not granted, request permission
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
+                1
+            )
+        } else {
+            // If permission granted, get location
+            // Check if GPS is enabled
+            val locationManager =
+                getSystemService(LOCATION_SERVICE) as LocationManager
+            if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                // Set current location to location variable
+                currentLocation =
+                    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+
+                // Update location text views
+                locationTextViewUserLat?.text = currentLocation?.latitude.toString()
+                locationTextViewUserLong?.text = currentLocation?.longitude.toString()
+                locationTextViewDogLat?.text = dogLocation?.latitude.toString()
+                locationTextViewDogLong?.text = dogLocation?.longitude.toString()
+
+                var currentLocation =
+                    Point.fromLngLat(currentLocation?.longitude!!, currentLocation?.latitude!!)
+
+                // Set camera position to current location
+                val cameraPosition = CameraOptions.Builder()
+                    .center(currentLocation)
+                    .zoom(15.0)
+                    .build()
+                mapView?.getMapboxMap()?.setCamera(cameraPosition)
+                // move maker marker to dog location
+                addAnnotationToMap(dogLocation?.latitude!!, dogLocation?.longitude!!)
+
+
+                // Calculate distance between user and dog
+                distance = distance(
+                    currentLocation.latitude(),
+                    currentLocation.longitude(),
+                    dogLocation?.latitude!!,
+                    dogLocation?.longitude!!
                 )
+
+                // Update distance text view rounded
+                locationTextViewDistance?.text = distance!!.roundToInt().toString() + "m"
             } else {
-                // If permission granted, get location
-                // Check if GPS is enabled
-                val locationManager =
-                    getSystemService(LOCATION_SERVICE) as LocationManager
-                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                    // Set current location to location variable
-                    currentLocation =
-                        locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-
-                    // Update location text views
-                    locationTextViewUserLat?.text = currentLocation?.latitude.toString()
-                    locationTextViewUserLong?.text = currentLocation?.longitude.toString()
-                    locationTextViewDogLat?.text = dogLocation?.latitude.toString()
-                    locationTextViewDogLong?.text = dogLocation?.longitude.toString()
-
-                    var currentLocation =
-                        Point.fromLngLat(currentLocation?.longitude!!, currentLocation?.latitude!!)
-
-                    // Set camera position to current location
-                    val cameraPosition = CameraOptions.Builder()
-                        .center(currentLocation)
-                        .zoom(15.0)
-                        .build()
-                    mapView?.getMapboxMap()?.setCamera(cameraPosition)
-                    // move maker marker to dog location
-                    addAnnotationToMap(dogLocation?.latitude!!, dogLocation?.longitude!!)
-
-
-
-
-                    // Calculate distance between user and dog
-                    distance = distance(currentLocation.latitude(), currentLocation.longitude(), dogLocation?.latitude!!, dogLocation?.longitude!!)
-
-                    // Update distance text view rounded
-                    locationTextViewDistance?.text = distance!!.roundToInt().toString() + "m"
-                } else {
-                    // Send toast to user to enable GPS
-                    Toast.makeText(this, "Please enable GPS", Toast.LENGTH_SHORT).show()
-                }
+                // Send toast to user to enable GPS
+                Toast.makeText(this, "Please enable GPS", Toast.LENGTH_SHORT).show()
             }
         }
 
     }
-
-
-
-
-
 
 
     override fun onStart() {
@@ -313,11 +264,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
 
-
     // on button click, download offline map
     private fun onButtonDownloadClick(locationButton: Button) {
         // Check to see if the edit text inputs are empty
-        if(inputEditTextZoom?.text?.isEmpty() == true || inputEditTextLat?.text?.isEmpty() == true || inputEditTextLong?.text?.isEmpty() == true){
+        if (inputEditTextZoom?.text?.isEmpty() == true || inputEditTextLat?.text?.isEmpty() == true || inputEditTextLong?.text?.isEmpty() == true) {
             // Send toast to user to enter values
             Toast.makeText(this, "Please enter values", Toast.LENGTH_SHORT).show()
         } else {
@@ -327,29 +277,33 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             var long = inputEditTextLong?.text.toString().toDouble()
 
 
-            var currentTime: Date = Calendar.getInstance().getTime()
-            var currentDate: String = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(currentTime)
+            var currentTime: Date = Calendar.getInstance().time
+            var currentDate: String =
+                SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(currentTime)
             // Define download location current location
-            var downloadLocation: Point = Point.fromLngLat(currentLocation?.longitude!!, currentLocation?.latitude!!)
+            var downloadLocation: Point =
+                Point.fromLngLat(currentLocation?.longitude!!, currentLocation?.latitude!!)
 
-            var MetadataID = currentTime.toString() + "_" + currentDate.toString() + "_" + zoom.toString() + "_" + lat.toString() + "_" + long.toString()
+            var MetadataID =
+                currentTime.toString() + "_" + currentDate.toString() + "_" + zoom.toString() + "_" + lat.toString() + "_" + long.toString()
 
             // log variables to console
-            Log.d("Download", "Zoom: " + zoom.toString())
-            Log.d("Download", "Lat: " + lat.toString())
-            Log.d("Download", "Long: " + long.toString())
-            Log.d("Download", "MetadataID: " + MetadataID.toString())
-            Log.d("Download", "DownloadLocation: " + downloadLocation.toString())
+            Log.d("Download", "Zoom: $zoom")
+            Log.d("Download", "Lat: $lat")
+            Log.d("Download", "Long: $long")
+            Log.d("Download", "MetadataID: $MetadataID")
+            Log.d("Download", "DownloadLocation: $downloadLocation")
 
 
             // Define Style Pack
             val stylePackLoadOptions = StylePackLoadOptions.Builder()
                 .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
-                .metadata(Value(MetadataID+"_StylePack"))
+                .metadata(Value(MetadataID + "_StylePack"))
                 .build()
 
             // Define tileset descriptor and tile region
-            val offlineManager: OfflineManager = OfflineManager(MapInitOptions.getDefaultResourceOptions(this))
+            val offlineManager: OfflineManager =
+                OfflineManager(MapInitOptions.getDefaultResourceOptions(this))
 
             val tilesetDescriptor = offlineManager.createTilesetDescriptor(
                 TilesetDescriptorOptions.Builder()
@@ -361,7 +315,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val tileRegionLoadOptions = TileRegionLoadOptions.Builder()
                 .geometry(downloadLocation)
                 .descriptors(listOf(tilesetDescriptor))
-                .metadata(Value(MetadataID+"_TileRegion"))
+                .metadata(Value(MetadataID + "_TileRegion"))
                 .acceptExpired(true)
                 .networkRestriction(NetworkRestriction.NONE)
                 .build()
@@ -405,7 +359,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 }
             )
 
-            Log.d("Download", "Style pack load options: " + stylePackLoadOptions.toString())
+            Log.d("Download", "Style pack load options: $stylePackLoadOptions")
             val tileStore = TileStore.create().also {
                 // Set default access token for the created tile store instance
                 it.setOption(
@@ -415,11 +369,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 )
             }
             val tileRegionCancelable = tileStore.loadTileRegion(
-                (MetadataID+"_TileRegionID"),
+                (MetadataID + "_TileRegionID"),
                 TileRegionLoadOptions.Builder()
                     .geometry(downloadLocation)
                     .descriptors(listOf(tilesetDescriptor))
-                    .metadata(Value(MetadataID+"_TileRegion"))
+                    .metadata(Value(MetadataID + "_TileRegion"))
                     .acceptExpired(true)
                     .networkRestriction(NetworkRestriction.NONE)
                     .build(),
@@ -458,10 +412,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
 
     }
-
-
-
-
 
 
     fun onButtonShowPopupWindowClick(view: View?) {
@@ -503,12 +453,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
         // Set download button on click listener
-        downloadButton?.setOnClickListener{
+        downloadButton?.setOnClickListener {
             onButtonDownloadClick(downloadButton!!)
         }
-
-
-
 
 
         // dismiss the popup window when touched
@@ -560,7 +507,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
 
     // Distance in meters between two lat/long points
-    fun distance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    private fun distance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val theta = lon1 - lon2
         var dist =
             sin(Math.toRadians(lat1)) * sin(Math.toRadians(lat2)) + cos(
@@ -574,7 +521,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     // Function called compute heading that takes in two lat/long doubles and compass heading and returns the heading
-    fun computeHeading(lat1: Double, lon1: Double, lat2: Double, lon2: Double, heading: Float): Double? {
+    private fun computeHeading(
+        lat1: Double,
+        lon1: Double,
+        lat2: Double,
+        lon2: Double,
+        heading: Float
+    ): Double? {
         val dLon = lon2 - lon1
         val y = sin(dLon) * cos(lat2)
         val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
@@ -584,41 +537,37 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
 
-
-    fun updateGPS(){
+    private fun updateGPS() {
         // Check android version
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            // Check if permission to access location is granted
-            if (ActivityCompat.checkSelfPermission(
-                    this,
-                    android.Manifest.permission.ACCESS_FINE_LOCATION
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                // If permission not granted, request permission
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
-                    1
-                )
+        // Check if permission to access location is granted
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // If permission not granted, request permission
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
+                1
+            )
+        } else {
+            // If permission granted, get location
+            // Check if GPS is enabled
+            val locationManager =
+                getSystemService(LOCATION_SERVICE) as LocationManager
+            if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                // Set current location to location variable
+                currentLocation =
+                    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+
+
+                var currentLocation =
+                    Point.fromLngLat(currentLocation?.longitude!!, currentLocation?.latitude!!)
+
             } else {
-                // If permission granted, get location
-                // Check if GPS is enabled
-                val locationManager =
-                    getSystemService(LOCATION_SERVICE) as LocationManager
-                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                    // Set current location to location variable
-                    currentLocation =
-                        locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-
-
-
-                    var currentLocation =
-                        Point.fromLngLat(currentLocation?.longitude!!, currentLocation?.latitude!!)
-
-                } else {
-                    // Send toast to user to enable GPS
-                    Toast.makeText(this, "Please enable GPS", Toast.LENGTH_SHORT).show()
-                }
+                // Send toast to user to enable GPS
+                Toast.makeText(this, "Please enable GPS", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -643,6 +592,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             pointAnnotationManager?.create(pointAnnotationOptions)
         }
     }
+
     private fun bitmapFromDrawableRes(context: Context, @DrawableRes resourceId: Int) =
         convertDrawableToBitmap(AppCompatResources.getDrawable(context, resourceId))
 
@@ -674,13 +624,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             updateGPS()
 
             // calculate the heading in degrees from your current location to the dog's location
-            if(currentLocation != null && dogLocation != null){
+            if (currentLocation != null && dogLocation != null) {
                 heading = computeHeading(
                     currentLocation!!.latitude,
                     currentLocation!!.longitude,
                     dogLocation!!.latitude,
                     dogLocation!!.longitude,
-                    event!!.values[0])
+                    event!!.values[0]
+                )
             }
             var dist = distance(
                 currentLocation!!.latitude,
@@ -698,11 +649,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             // get the angle around the z-axis rotated
 
 
-            tvHeading!!.text = "Heading: " + heading?.let { java.lang.Double.toString(it) } + " degrees"
+            tvHeading!!.text =
+                "Heading: " + heading?.let { java.lang.Double.toString(it) } + " degrees"
             // update tvDistance with the distance between the current location and the dog's location
             tvDistance!!.text = "Distance: " + dist.toString() + " meters"
-
-
 
 
             // create a rotation animation to point to the dog's location
@@ -740,28 +690,29 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-            // toast message
-            Toast.makeText(this, "Compass accuracy changed", Toast.LENGTH_SHORT).show()
+        // toast message
+        Toast.makeText(this, "Compass accuracy changed", Toast.LENGTH_SHORT).show()
 
     }
+
     override fun onResume() {
         super.onResume()
 
 
-            // for the system's orientation sensor registered listeners
-            mSensorManager!!.registerListener(
-                this, mSensorManager!!.getDefaultSensor(Sensor.TYPE_ORIENTATION),
-                SensorManager.SENSOR_DELAY_GAME
-            )
+        // for the system's orientation sensor registered listeners
+        mSensorManager!!.registerListener(
+            this, mSensorManager!!.getDefaultSensor(Sensor.TYPE_ORIENTATION),
+            SensorManager.SENSOR_DELAY_GAME
+        )
 
     }
 
     override fun onPause() {
 
-            super.onPause()
+        super.onPause()
 
-            // to stop the listener and save battery
-            mSensorManager!!.unregisterListener(this)
+        // to stop the listener and save battery
+        mSensorManager!!.unregisterListener(this)
 
     }
 
