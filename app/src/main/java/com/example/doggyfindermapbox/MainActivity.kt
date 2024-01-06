@@ -35,25 +35,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.FusedLocationProviderClient
-import com.mapbox.bindgen.Value
-import com.mapbox.common.NetworkRestriction
-import com.mapbox.common.TileDataDomain
-import com.mapbox.common.TileRegionLoadOptions
-import com.mapbox.common.TileStore
-import com.mapbox.common.TileStoreOptions
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
-import com.mapbox.maps.GlyphsRasterizationMode
-import com.mapbox.maps.MapInitOptions
 import com.mapbox.maps.MapView
-import com.mapbox.maps.OfflineManager
 import com.mapbox.maps.Style
-import com.mapbox.maps.StylePackLoadOptions
-import com.mapbox.maps.TilesetDescriptorOptions
 import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
-import com.mapbox.maps.plugin.locationcomponent.location
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -124,15 +112,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         mapView = findViewById(R.id.mapView)
         mapView?.getMapboxMap()?.loadStyleUri(
-            Style.SATELLITE_STREETS
-        )
-        // After the style is loaded, initialize the Location component.
-        {
-            mapView?.location?.updateSettings {
-                enabled = true
-                pulsingEnabled = true
+            Style.SATELLITE_STREETS,
+            object : Style.OnStyleLoaded {
+                override fun onStyleLoaded(style: Style) {
+                    addAnnotationToMap(dogLocation?.latitude!!, dogLocation?.longitude!!)
+                }
             }
-        }
+        )
+//        // After the style is loaded, initialize the Location component.
+//        {
+//            mapView?.location?.updateSettings {
+//                enabled = true
+//                pulsingEnabled = true
+//            }
+//        }
 
 
         // initialize your android device sensor capabilities
@@ -294,118 +287,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             Log.d("Download", "MetadataID: $MetadataID")
             Log.d("Download", "DownloadLocation: $downloadLocation")
 
-
-            // Define Style Pack
-            val stylePackLoadOptions = StylePackLoadOptions.Builder()
-                .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
-                .metadata(Value(MetadataID + "_StylePack"))
-                .build()
-
-            // Define tileset descriptor and tile region
-            val offlineManager: OfflineManager =
-                OfflineManager(MapInitOptions.getDefaultResourceOptions(this))
-
-            val tilesetDescriptor = offlineManager.createTilesetDescriptor(
-                TilesetDescriptorOptions.Builder()
-                    .styleURI(Style.SATELLITE_STREETS)
-                    .minZoom(0)
-                    .maxZoom(16)
-                    .build()
-            )
-            val tileRegionLoadOptions = TileRegionLoadOptions.Builder()
-                .geometry(downloadLocation)
-                .descriptors(listOf(tilesetDescriptor))
-                .metadata(Value(MetadataID + "_TileRegion"))
-                .acceptExpired(true)
-                .networkRestriction(NetworkRestriction.NONE)
-                .build()
-
-
-            val stylePackCancelable = offlineManager.loadStylePack(
-                Style.SATELLITE_STREETS,
-                // Build Style pack load options
-                stylePackLoadOptions,
-                { progress ->
-                    // Handle the download progress using toasts and log statements
-                    Toast.makeText(
-                        this,
-                        "Style pack download progress: ${progress}%",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    Log.d("Download", "Style pack download progress: ${progress}%")
-
-                },
-                { expected ->
-                    if (expected.isValue) {
-                        expected.value?.let { stylePack ->
-                            // Style pack download finished successfully using toasts
-                            Toast.makeText(
-                                this,
-                                "Style pack downloaded successfully",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            Log.d("Download", "Style pack downloaded successfully")
-                        }
-                    }
-                    expected.error?.let {
-                        // Handle errors that occurred during the style pack download using toasts
-                        Toast.makeText(
-                            this,
-                            "Style pack download error: ${it.message}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        Log.d("Download", "Style pack download error: ${it.message}")
-                    }
-                }
-            )
-
-            Log.d("Download", "Style pack load options: $stylePackLoadOptions")
-            val tileStore = TileStore.create().also {
-                // Set default access token for the created tile store instance
-                it.setOption(
-                    TileStoreOptions.MAPBOX_ACCESS_TOKEN,
-                    TileDataDomain.MAPS,
-                    Value(getString(R.string.mapbox_access_token))
-                )
-            }
-            val tileRegionCancelable = tileStore.loadTileRegion(
-                (MetadataID + "_TileRegionID"),
-                TileRegionLoadOptions.Builder()
-                    .geometry(downloadLocation)
-                    .descriptors(listOf(tilesetDescriptor))
-                    .metadata(Value(MetadataID + "_TileRegion"))
-                    .acceptExpired(true)
-                    .networkRestriction(NetworkRestriction.NONE)
-                    .build(),
-                { progress ->
-                    // Handle the download progress using toasts
-                    Toast.makeText(
-                        this,
-                        "Tile region download progress: ${progress}%",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    Log.d("Download", "Tile region download progress: ${progress}%")
-                }
-            ) { expected ->
-                if (expected.isValue) {
-                    // Tile region download finishes successfully using toasts
-                    Toast.makeText(
-                        this,
-                        "Tile region downloaded successfully",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    Log.d("Download", "Tile region downloaded successfully")
-                }
-                expected.error?.let {
-                    // Handle errors that occurred during the tile region download using toasts
-                    Toast.makeText(
-                        this,
-                        "Tile region download error: ${it.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    Log.d("Download", "Tile region download error: ${it.message}")
-                }
-            }
 
         }
         Log.d("Download", "Download finished")
@@ -574,21 +455,21 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
 
     private fun addAnnotationToMap(lat: Double, long: Double) {
-// Create an instance of the Annotation API and get the PointAnnotationManager.
+        // Create an instance of the Annotation API and get the PointAnnotationManager.
         bitmapFromDrawableRes(
             this@MainActivity,
             R.drawable.red_marker
         )?.let {
             val annotationApi = mapView?.annotations
-            val pointAnnotationManager = annotationApi?.createPointAnnotationManager(mapView!!)
-// Set options for the resulting symbol layer.
+            val pointAnnotationManager = annotationApi?.createPointAnnotationManager()
+            // Set options for the resulting symbol layer.
             val pointAnnotationOptions: PointAnnotationOptions = PointAnnotationOptions()
-// Define a geographic coordinate.
+                // Define a geographic coordinate.
                 .withPoint(Point.fromLngLat(long, lat))
-// Specify the bitmap you assigned to the point annotation
-// The bitmap will be added to map style automatically.
+                // Specify the bitmap you assigned to the point annotation
+                // The bitmap will be added to map style automatically.
                 .withIconImage(it)
-// Add the resulting pointAnnotation to the map.
+            // Add the resulting pointAnnotation to the map.
             pointAnnotationManager?.create(pointAnnotationOptions)
         }
     }
@@ -615,6 +496,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             drawable.draw(canvas)
             bitmap
         }
+
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
@@ -718,3 +600,4 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
 
 }
+
