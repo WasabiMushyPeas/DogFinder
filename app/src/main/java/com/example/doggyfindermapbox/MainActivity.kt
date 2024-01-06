@@ -13,14 +13,10 @@ import android.hardware.SensorManager
 import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
-import android.os.Handler
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
-import android.view.View.OnTouchListener
-import android.view.ViewConfiguration
 import android.view.animation.Animation
 import android.view.animation.RotateAnimation
 import android.widget.Button
@@ -69,6 +65,7 @@ private var inputEditTextLong: EditText? = null
 private var locationButton: Button? = null
 private var downloadButton: Button? = null
 private var compassButton: Button? = null
+private var infoButton: Button? = null
 
 // Location variables
 private var fusedLocationProviderClient: FusedLocationProviderClient? = null
@@ -102,9 +99,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         // Initialize location views and button variables
 
 
-        findViewById<Button>(R.id.download_button)
+        findViewById<Button>(R.id.compass_button)
             .setOnClickListener {
-                onButtonShowPopupWindowClick(findViewById(R.id.download_button))
+                onButtonShowPopupWindowClick(findViewById(R.id.compass_button))
+            }
+        findViewById<Button>(R.id.info_button)
+            .setOnClickListener {
+                onButtonShowPopupWindowClick(findViewById(R.id.info_button))
             }
 
 
@@ -132,44 +133,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         mSensorManager = getSystemService(SENSOR_SERVICE) as SensorManager?;
 
 
-        var view = findViewById<View>(R.id.download_button)
+        var comView = findViewById<View>(R.id.compass_button)
 
-        view.setOnTouchListener(object : OnTouchListener {
-            var handler = Handler()
-            var numberOfTaps = 0
-            var lastTapTimeMs: Long = 0
-            var touchDownMs: Long = 0
-            override fun onTouch(v: View, event: MotionEvent): Boolean {
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> touchDownMs = System.currentTimeMillis()
-                    MotionEvent.ACTION_UP -> {
-                        handler.removeCallbacksAndMessages(null)
-                        if (System.currentTimeMillis() - touchDownMs > ViewConfiguration.getTapTimeout()) {
-                            //it was not a tap
-                            numberOfTaps = 0
-                            lastTapTimeMs = 0
-                        }
-                        if (numberOfTaps > 0
-                            && System.currentTimeMillis() - lastTapTimeMs < ViewConfiguration.getDoubleTapTimeout()
-                        ) {
-                            numberOfTaps += 1
-                        } else {
-                            numberOfTaps = 1
-                        }
-                        lastTapTimeMs = System.currentTimeMillis()
-                        if (numberOfTaps == 3) {
-                            onButtonCompassClick(findViewById(R.id.download_button))
-                            //handle triple tap
-                        } else if (numberOfTaps == 2) {
-                            handler.postDelayed({ //handle double tap
-                                onButtonShowPopupWindowClick(findViewById(R.id.download_button))
-                            }, ViewConfiguration.getDoubleTapTimeout().toLong())
-                        }
-                    }
-                }
-                return true
-            }
-        })
+        // when view is clicked open popup window
+        comView.setOnClickListener {
+            onButtonCompassClick(comView)
+        }
+
+        var infoView = findViewById<View>(R.id.info_button)
+
+        // when view is clicked open popup window
+        infoView.setOnClickListener {
+            onButtonShowPopupWindowClick(infoView)
+        }
 
 
     }
@@ -320,7 +296,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         inputEditTextZoom = popupView.findViewById(R.id.zoom_input)
         inputEditTextLat = popupView.findViewById(R.id.lat_input)
         inputEditTextLong = popupView.findViewById(R.id.long_input)
-        downloadButton = popupView.findViewById(R.id.download_button)
+        downloadButton = popupView.findViewById(R.id.compass_button)
+        infoButton = popupView.findViewById(R.id.info_button)
         locationButton = popupView.findViewById(R.id.location_button)
 
         locationTextViewDistance?.text = distance?.roundToInt().toString() + "m"
@@ -408,7 +385,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         lat2: Double,
         lon2: Double,
         heading: Float
-    ): Double? {
+    ): Double {
         val dLon = lon2 - lon1
         val y = sin(dLon) * cos(lat2)
         val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
