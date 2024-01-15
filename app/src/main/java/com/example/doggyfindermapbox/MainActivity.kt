@@ -31,10 +31,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.mapbox.common.NetworkRestriction
+import com.mapbox.common.TileRegionLoadOptions
+import com.mapbox.common.TileStore
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
+import com.mapbox.maps.GlyphsRasterizationMode
 import com.mapbox.maps.MapView
+import com.mapbox.maps.OfflineManager
 import com.mapbox.maps.Style
+import com.mapbox.maps.StylePackLoadOptions
+import com.mapbox.maps.TilesetDescriptorOptions
 import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
@@ -63,9 +70,10 @@ private var inputEditTextZoom: EditText? = null
 private var inputEditTextLat: EditText? = null
 private var inputEditTextLong: EditText? = null
 private var locationButton: Button? = null
-private var downloadButton: Button? = null
 private var compassButton: Button? = null
 private var infoButton: Button? = null
+private var updateButton: Button? = null
+private var downloadvButton: Button? = null
 
 // Location variables
 private var fusedLocationProviderClient: FusedLocationProviderClient? = null
@@ -86,6 +94,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var isCompassOpen = false
 
 
+    // --------------------------------------------------Map--------------------------------------------------
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -94,20 +103,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         dogLocation = Location("")
         dogLocation?.latitude = 35.144687
         dogLocation?.longitude = -106.651482
-
-
-        // Initialize location views and button variables
-
-
-        findViewById<Button>(R.id.compass_button)
-            .setOnClickListener {
-                onButtonShowPopupWindowClick(findViewById(R.id.compass_button))
-            }
-        findViewById<Button>(R.id.info_button)
-            .setOnClickListener {
-                onButtonShowPopupWindowClick(findViewById(R.id.info_button))
-            }
-
 
 
 
@@ -133,24 +128,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         mSensorManager = getSystemService(SENSOR_SERVICE) as SensorManager?;
 
 
-        var comView = findViewById<View>(R.id.compass_button)
+        compassButton = findViewById(R.id.compass_button)
+        infoButton = findViewById(R.id.info_button)
+        updateButton = findViewById(R.id.update_button)
+        downloadvButton = findViewById(R.id.download_button)
 
-        // when view is clicked open popup window
-        comView.setOnClickListener {
-            onButtonCompassClick(comView)
-        }
 
-        var infoView = findViewById<View>(R.id.info_button)
-
-        // when view is clicked open popup window
-        infoView.setOnClickListener {
-            onButtonShowPopupWindowClick(infoView)
-        }
+        setupButtons()
 
 
     }
 
-    private fun onButtonUpdateLocationClick(locationButton: Button) {
+    private fun onButtonUpdateLocationClick() {
         // Check android version
         // Check if permission to access location is granted
         if (ActivityCompat.checkSelfPermission(
@@ -233,45 +222,52 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
 
+    // --------------------------------------------------Windows--------------------------------------------------
+
+
     // on button click, download offline map
-    private fun onButtonDownloadClick(locationButton: Button) {
-        // Check to see if the edit text inputs are empty
-        if (inputEditTextZoom?.text?.isEmpty() == true || inputEditTextLat?.text?.isEmpty() == true || inputEditTextLong?.text?.isEmpty() == true) {
-            // Send toast to user to enter values
-            Toast.makeText(this, "Please enter values", Toast.LENGTH_SHORT).show()
-        } else {
-            // Set zoom, lat and long to edit text values
-            var zoom = inputEditTextZoom?.text.toString().toDouble()
-            var lat = inputEditTextLat?.text.toString().toDouble()
-            var long = inputEditTextLong?.text.toString().toDouble()
+    private fun onButtonDownloadClick() {
+        // Get maps current zoom level
+        val zoom = mapView?.getMapboxMap()?.cameraState?.zoom
+        // Get maps current center latitude
+        val lat = mapView?.getMapboxMap()?.cameraState?.center?.latitude()
+        // Get maps current center longitude
+        val long = mapView?.getMapboxMap()?.cameraState?.center?.longitude()
 
 
-            var currentTime: Date = Calendar.getInstance().time
-            var currentDate: String =
-                SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(currentTime)
-            // Define download location current location
-            var downloadLocation: Point =
-                Point.fromLngLat(currentLocation?.longitude!!, currentLocation?.latitude!!)
+        val currentTime: Date = Calendar.getInstance().time
+        val currentDate: String =
+            SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(currentTime)
+        // Define download location current location
+        val downloadLocation: Point =
+            Point.fromLngLat(currentLocation?.longitude!!, currentLocation?.latitude!!)
 
-            var MetadataID =
-                currentTime.toString() + "_" + currentDate.toString() + "_" + zoom.toString() + "_" + lat.toString() + "_" + long.toString()
+        val metadataID =
+            currentTime.toString() + "_" + currentDate.toString() + "_" + zoom.toString() + "_" + lat.toString() + "_" + long.toString()
 
-            // log variables to console
-            Log.d("Download", "Zoom: $zoom")
-            Log.d("Download", "Lat: $lat")
-            Log.d("Download", "Long: $long")
-            Log.d("Download", "MetadataID: $MetadataID")
-            Log.d("Download", "DownloadLocation: $downloadLocation")
+        // log variables to console
+        Log.d("Download", "Zoom: $zoom")
+        Log.d("Download", "Lat: $lat")
+        Log.d("Download", "Long: $long")
+        Log.d("Download", "MetadataID: $metadataID")
+        Log.d("Download", "DownloadLocation: $downloadLocation")
 
-
+        if (lat != null) {
+            if (long != null) {
+                if (zoom != null) {
+                    downloadRegion(lat, long, zoom)
+                }
+            }
         }
+
+
         Log.d("Download", "Download finished")
 
 
     }
 
 
-    fun onButtonShowPopupWindowClick(view: View?) {
+    private fun onButtonShowPopupWindowClick(view: View?) {
 
         // inflate the layout of the popup window
         val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
@@ -296,24 +292,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         inputEditTextZoom = popupView.findViewById(R.id.zoom_input)
         inputEditTextLat = popupView.findViewById(R.id.lat_input)
         inputEditTextLong = popupView.findViewById(R.id.long_input)
-        downloadButton = popupView.findViewById(R.id.compass_button)
-        infoButton = popupView.findViewById(R.id.info_button)
         locationButton = popupView.findViewById(R.id.location_button)
 
         locationTextViewDistance?.text = distance?.roundToInt().toString() + "m"
         locationTextViewDogLat?.text = dogLocation?.latitude.toString()
         locationTextViewDogLong?.text = dogLocation?.longitude.toString()
-
-
-        // Set location button on click listener
-        locationButton?.setOnClickListener {
-            onButtonUpdateLocationClick(locationButton!!)
-        }
-
-        // Set download button on click listener
-        downloadButton?.setOnClickListener {
-            onButtonDownloadClick(downloadButton!!)
-        }
 
 
         // dismiss the popup window when touched
@@ -362,6 +345,48 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
     }
+
+    private fun setupButtons() {
+
+
+        // Initialize location views and button variables
+        findViewById<Button>(R.id.compass_button)
+            .setOnClickListener {
+                onButtonShowPopupWindowClick(findViewById(R.id.compass_button))
+            }
+        findViewById<Button>(R.id.info_button)
+            .setOnClickListener {
+                onButtonShowPopupWindowClick(findViewById(R.id.info_button))
+            }
+        findViewById<Button>(R.id.update_button)
+            .setOnClickListener {
+                onButtonUpdateLocationClick()
+            }
+        findViewById<Button>(R.id.download_button)
+            .setOnClickListener {
+                onButtonDownloadClick()
+            }
+
+
+        val comView = findViewById<View>(R.id.compass_button)
+
+        // when view is clicked open popup window
+        comView.setOnClickListener {
+            onButtonCompassClick(comView)
+        }
+
+        val infoView = findViewById<View>(R.id.info_button)
+
+        // when view is clicked open popup window
+        infoView.setOnClickListener {
+            onButtonShowPopupWindowClick(infoView)
+        }
+
+
+    }
+
+
+    // --------------------------------------------------Distance Heading and pos--------------------------------------------------
 
 
     // Distance in meters between two lat/long points
@@ -431,6 +456,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
 
+    // --------------------------------------------------Map annotations--------------------------------------------------
+
+
     private fun addAnnotationToMap(lat: Double, long: Double) {
         // Create an instance of the Annotation API and get the PointAnnotationManager.
         bitmapFromDrawableRes(
@@ -475,6 +503,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
     }
+
+
+    // --------------------------------------------------Compass--------------------------------------------------
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (isCompassOpen && tvHeading != null && image != null) {
@@ -572,6 +603,106 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         // to stop the listener and save battery
         mSensorManager!!.unregisterListener(this)
+
+    }
+
+
+    // --------------------------------------------------Offline--------------------------------------------------
+
+    private fun downloadRegion(lat: Double, long: Double, zoom: Double) {
+
+
+        val stylePackLoadOptions = StylePackLoadOptions.Builder()
+            .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
+            .build()
+
+        val offlineManager: OfflineManager = OfflineManager()
+
+        val tilesetDescriptor = offlineManager.createTilesetDescriptor(
+            TilesetDescriptorOptions.Builder()
+                .styleURI(Style.SATELLITE_STREETS)
+                .minZoom(0)
+                .maxZoom(16)
+                .build()
+        )
+        val tileRegionLoadOptions = TileRegionLoadOptions.Builder()
+            .geometry(Point.fromLngLat(long, lat))
+            .descriptors(listOf(tilesetDescriptor))
+            .acceptExpired(false)
+            .networkRestriction(NetworkRestriction.NONE)
+            .build()
+
+
+        // Start downloading the region
+        val stylePackCancelable = offlineManager.loadStylePack(
+            Style.OUTDOORS,
+            // Build Style pack load options
+            stylePackLoadOptions,
+            { progress ->
+                // Handle the download progress via toast message
+                Toast.makeText(this, "Downloading style in progress...", Toast.LENGTH_SHORT)
+                    .show()
+                Log.d("Download", "Downloading style progress: $progress")
+            },
+            { expected ->
+                if (expected.isValue) {
+                    expected.value?.let { stylePack ->
+                        // Style pack download finished successfully via toast message
+                        Toast.makeText(this, "Downloading style finished", Toast.LENGTH_SHORT)
+                            .show()
+                        Log.d("Download", "Downloading style finished")
+                    }
+                }
+                expected.error?.let {
+                    // Handle errors that occurred during the style pack download via toast message
+                    Toast.makeText(this, "Downloading style error: $it", Toast.LENGTH_SHORT).show()
+                    Log.d("Download", "Downloading style error: $it")
+                }
+            }
+        )
+        // Cancel the download if needed
+        stylePackCancelable.cancel()
+
+
+        val tileStore = TileStore.create()
+        val TILE_REGION_ID = "lat: $lat long: $long zoom: $zoom"
+        val tileRegionCancelable = tileStore.loadTileRegion(
+            TILE_REGION_ID,
+            TileRegionLoadOptions.Builder()
+                .geometry(Point.fromLngLat(long, lat))
+                .descriptors(listOf(tilesetDescriptor))
+                .acceptExpired(false)
+                .networkRestriction(NetworkRestriction.NONE)
+                .build(),
+            { progress ->
+                // Handle the download progress via toast message
+                Toast.makeText(this, "Downloading tiles progress: $progress", Toast.LENGTH_SHORT)
+                    .show()
+                Log.d("Download", "Downloading tiles progress: $progress")
+            }
+        ) { expected ->
+            if (expected.isValue) {
+                // Tile region download finishes successfully via toast message
+                expected.value?.let {
+                    Toast.makeText(this, "Downloading tiles finished", Toast.LENGTH_SHORT).show()
+                    Log.d("Download", "Downloading tiles finished")
+                }
+            }
+            expected.error?.let {
+                // Handle errors that occurred during the tile region download via toast message
+                //Toast.makeText(this, "Downloading tiles error: $it", Toast.LENGTH_SHORT).show()
+                Log.d("Download", "Downloading tiles error: $it")
+            }
+        }
+
+// Cancel the download if needed
+        tileRegionCancelable.cancel()
+
+        // Toast message
+        Toast.makeText(this, "Offline Download finished", Toast.LENGTH_LONG).show()
+
+        Log.d("Download", "Offline Download finished")
+
 
     }
 
