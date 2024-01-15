@@ -20,7 +20,6 @@ import android.view.View
 import android.view.animation.Animation
 import android.view.animation.RotateAnimation
 import android.widget.Button
-import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
@@ -45,6 +44,7 @@ import com.mapbox.maps.TilesetDescriptorOptions
 import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
+import com.mapbox.maps.plugin.locationcomponent.location
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -66,10 +66,6 @@ private var locationTextViewUserLong: TextView? = null
 private var locationTextViewDogLat: TextView? = null
 private var locationTextViewDogLong: TextView? = null
 private var locationTextViewDistance: TextView? = null
-private var inputEditTextZoom: EditText? = null
-private var inputEditTextLat: EditText? = null
-private var inputEditTextLong: EditText? = null
-private var locationButton: Button? = null
 private var compassButton: Button? = null
 private var infoButton: Button? = null
 private var updateButton: Button? = null
@@ -95,6 +91,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
 
     // --------------------------------------------------Map--------------------------------------------------
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -112,16 +110,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             object : Style.OnStyleLoaded {
                 override fun onStyleLoaded(style: Style) {
                     addAnnotationToMap(dogLocation?.latitude!!, dogLocation?.longitude!!)
+                    mapView!!.location.updateSettings {
+                        this.enabled = true
+                        this.pulsingEnabled = true
+                    }
                 }
             }
         )
-//        // After the style is loaded, initialize the Location component.
-//        {
-//            mapView?.location?.updateSettings {
-//                enabled = true
-//                pulsingEnabled = true
-//            }
-//        }
 
 
         // initialize your android device sensor capabilities
@@ -256,12 +251,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             if (long != null) {
                 if (zoom != null) {
                     downloadRegion(lat, long, zoom)
+                    Log.d("Download", "Download finished")
                 }
             }
         }
-
-
-        Log.d("Download", "Download finished")
 
 
     }
@@ -289,11 +282,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         locationTextViewDogLat = popupView.findViewById(R.id.location_text_view_dog_lat)
         locationTextViewDogLong = popupView.findViewById(R.id.location_text_view_dog_long)
         locationTextViewDistance = popupView.findViewById(R.id.location_text_view_distance)
-        inputEditTextZoom = popupView.findViewById(R.id.zoom_input)
-        inputEditTextLat = popupView.findViewById(R.id.lat_input)
-        inputEditTextLong = popupView.findViewById(R.id.long_input)
-        locationButton = popupView.findViewById(R.id.location_button)
-
         locationTextViewDistance?.text = distance?.roundToInt().toString() + "m"
         locationTextViewDogLat?.text = dogLocation?.latitude.toString()
         locationTextViewDogLong?.text = dogLocation?.longitude.toString()
