@@ -30,6 +30,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.mapbox.bindgen.Value
 import com.mapbox.common.NetworkRestriction
 import com.mapbox.common.TileRegionLoadOptions
 import com.mapbox.common.TileStore
@@ -250,7 +251,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if (lat != null) {
             if (long != null) {
                 if (zoom != null) {
-                    downloadRegion(lat, long, zoom)
+                    downloadRegion(lat, long, zoom, metadataID)
                     Log.d("Download", "Download finished")
                 }
             }
@@ -285,6 +286,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         locationTextViewDistance?.text = distance?.roundToInt().toString() + "m"
         locationTextViewDogLat?.text = dogLocation?.latitude.toString()
         locationTextViewDogLong?.text = dogLocation?.longitude.toString()
+
+        onButtonUpdateLocationClick()
 
 
         // dismiss the popup window when touched
@@ -597,11 +600,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     // --------------------------------------------------Offline--------------------------------------------------
 
-    private fun downloadRegion(lat: Double, long: Double, zoom: Double) {
+    private fun downloadRegion(lat: Double, long: Double, zoom: Double, metadata: String) {
 
 
         val stylePackLoadOptions = StylePackLoadOptions.Builder()
             .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
+            .metadata(Value(metadata))
             .build()
 
         val offlineManager: OfflineManager = OfflineManager()
@@ -618,6 +622,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .descriptors(listOf(tilesetDescriptor))
             .acceptExpired(false)
             .networkRestriction(NetworkRestriction.NONE)
+            .metadata(Value("region: $lat, $long, $zoom"))
             .build()
 
 
