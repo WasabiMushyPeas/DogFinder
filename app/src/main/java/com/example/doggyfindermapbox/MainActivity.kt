@@ -133,6 +133,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
 
         setupButtons()
+        onButtonUpdateLocationClick()
 
 
     }
@@ -609,7 +610,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         //  If the user clicks no, do nothing
 
         val builder1: AlertDialog.Builder = AlertDialog.Builder(this@MainActivity)
-        builder1.setMessage("Are you sure you want to download the map?\n\nThis will download the current map view window and delete any previous downloads.")
+        builder1.setMessage("Are you sure you want to download the map?\n\nThis will download the current map view window")
         builder1.setCancelable(true)
 
         builder1.setPositiveButton(
@@ -618,6 +619,40 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 dialog.cancel()
 
                 // Delete previous downloads
+                val offlineManager: OfflineManager = OfflineManager()
+                val tileStore = TileStore.create()
+
+//                offlineManager.getAllStylePacks { expected ->
+//                    if (expected.isValue) {
+//                        expected.value?.let { stylePackList ->
+//                            Log.d("Listing", "Existing style packs: $stylePackList")
+////                            // Delete all existing style packs
+////                            for (stylePack in stylePackList) {
+////                                offlineManager.removeStylePack(stylePack.toString())
+////                            }
+//                        }
+//                    }
+//                    expected.error?.let { stylePackError ->
+//                        Log.e("Listing", "StylePackError: $stylePackError")
+//                    }
+//                }
+//
+//                tileStore.getAllTileRegions { expected ->
+//                    if (expected.isValue) {
+//                        expected.value?.let { tileRegionList ->
+//                            Log.d("Listing", "Existing tile regions: $tileRegionList")
+//                            // Delete all existing tile regions
+//                            for (tileRegion in tileRegionList) {
+//                                tileStore.removeTileRegion(tileRegion.toString())
+//                            }
+//                        }
+//                    }
+//                    expected.error?.let { tileRegionError ->
+//                        Log.e("Listing", "TileRegionError: $tileRegionError")
+//                    }
+//                }
+
+                Toast.makeText(this, "Offline Download Started", Toast.LENGTH_LONG).show()
 
 
                 // Clicked yes, download the map
@@ -625,8 +660,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
                     .metadata(Value(metadata))
                     .build()
-
-                val offlineManager: OfflineManager = OfflineManager()
+                Log.d("Download Info", "stylePackLoadOptions: $stylePackLoadOptions")
 
                 val tilesetDescriptor = offlineManager.createTilesetDescriptor(
                     TilesetDescriptorOptions.Builder()
@@ -635,6 +669,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                         .maxZoom(16)
                         .build()
                 )
+                Log.d("Download Info", "tilesetDescriptor: $tilesetDescriptor")
+
                 val tileRegionLoadOptions = TileRegionLoadOptions.Builder()
                     .geometry(Point.fromLngLat(long, lat))
                     .descriptors(listOf(tilesetDescriptor))
@@ -642,6 +678,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     .networkRestriction(NetworkRestriction.NONE)
                     .metadata(Value("region: $lat, $long, $zoom"))
                     .build()
+                Log.d("Download Info", "tileRegionLoadOptions: $tileRegionLoadOptions")
 
 
                 // Start downloading the region
@@ -650,37 +687,25 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     // Build Style pack load options
                     stylePackLoadOptions,
                     { progress ->
-                        // Handle the download progress via toast message
-                        Toast.makeText(this, "Downloading style in progress...", Toast.LENGTH_SHORT)
-                            .show()
                         Log.d("Download", "Downloading style progress: $progress")
                     },
                     { expected ->
                         if (expected.isValue) {
                             expected.value?.let { stylePack ->
                                 // Style pack download finished successfully via toast message
-                                Toast.makeText(
-                                    this,
-                                    "Downloading style finished",
-                                    Toast.LENGTH_SHORT
-                                )
-                                    .show()
+
                                 Log.d("Download", "Downloading style finished")
                             }
                         }
                         expected.error?.let {
-                            // Handle errors that occurred during the style pack download via toast message
-                            Toast.makeText(this, "Downloading style error: $it", Toast.LENGTH_SHORT)
-                                .show()
                             Log.d("Download", "Downloading style error: $it")
                         }
                     }
                 )
                 // Cancel the download if needed
-                stylePackCancelable.cancel()
+                //stylePackCancelable.cancel()
 
 
-                val tileStore = TileStore.create()
                 val TILE_REGION_ID = "lat: $lat long: $long zoom: $zoom"
                 val tileRegionCancelable = tileStore.loadTileRegion(
                     TILE_REGION_ID,
@@ -691,21 +716,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                         .networkRestriction(NetworkRestriction.NONE)
                         .build(),
                     { progress ->
-                        // Handle the download progress via toast message
-                        Toast.makeText(
-                            this,
-                            "Downloading tiles progress: $progress",
-                            Toast.LENGTH_SHORT
-                        )
-                            .show()
                         Log.d("Download", "Downloading tiles progress: $progress")
                     }
                 ) { expected ->
                     if (expected.isValue) {
                         // Tile region download finishes successfully via toast message
                         expected.value?.let {
-                            Toast.makeText(this, "Downloading tiles finished", Toast.LENGTH_SHORT)
-                                .show()
                             Log.d("Download", "Downloading tiles finished")
                         }
                     }
@@ -717,7 +733,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 }
 
                 // Cancel the download if needed
-                tileRegionCancelable.cancel()
+                //tileRegionCancelable.cancel()
 
                 // Toast message
                 Toast.makeText(this, "Offline Download finished", Toast.LENGTH_LONG).show()
