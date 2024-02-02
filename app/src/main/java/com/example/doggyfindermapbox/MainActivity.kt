@@ -1,6 +1,7 @@
 package com.example.doggyfindermapbox
 
 import android.content.Context
+import android.content.DialogInterface
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -26,6 +27,7 @@ import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.DrawableRes
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.app.ActivityCompat
@@ -252,7 +254,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             if (long != null) {
                 if (zoom != null) {
                     downloadRegion(lat, long, zoom, metadataID)
-                    Log.d("Download", "Download finished")
+                    //Log.d("Download", "Download finished")
                 }
             }
         }
@@ -602,99 +604,135 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun downloadRegion(lat: Double, long: Double, zoom: Double, metadata: String) {
 
+        //  Make a dialog that asks the user if they want to download the map
+        //  If the user clicks yes, download the map
+        //  If the user clicks no, do nothing
 
-        val stylePackLoadOptions = StylePackLoadOptions.Builder()
-            .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
-            .metadata(Value(metadata))
-            .build()
+        val builder1: AlertDialog.Builder = AlertDialog.Builder(this@MainActivity)
+        builder1.setMessage("Are you sure you want to download the map?\n\nThis will download the current map view window and delete any previous downloads.")
+        builder1.setCancelable(true)
 
-        val offlineManager: OfflineManager = OfflineManager()
+        builder1.setPositiveButton(
+            "Yes",
+            DialogInterface.OnClickListener { dialog, id ->
+                dialog.cancel()
 
-        val tilesetDescriptor = offlineManager.createTilesetDescriptor(
-            TilesetDescriptorOptions.Builder()
-                .styleURI(Style.SATELLITE_STREETS)
-                .minZoom(0)
-                .maxZoom(16)
-                .build()
-        )
-        val tileRegionLoadOptions = TileRegionLoadOptions.Builder()
-            .geometry(Point.fromLngLat(long, lat))
-            .descriptors(listOf(tilesetDescriptor))
-            .acceptExpired(false)
-            .networkRestriction(NetworkRestriction.NONE)
-            .metadata(Value("region: $lat, $long, $zoom"))
-            .build()
+                // Delete previous downloads
 
 
-        // Start downloading the region
-        val stylePackCancelable = offlineManager.loadStylePack(
-            Style.OUTDOORS,
-            // Build Style pack load options
-            stylePackLoadOptions,
-            { progress ->
-                // Handle the download progress via toast message
-                Toast.makeText(this, "Downloading style in progress...", Toast.LENGTH_SHORT)
-                    .show()
-                Log.d("Download", "Downloading style progress: $progress")
-            },
-            { expected ->
-                if (expected.isValue) {
-                    expected.value?.let { stylePack ->
-                        // Style pack download finished successfully via toast message
-                        Toast.makeText(this, "Downloading style finished", Toast.LENGTH_SHORT)
+                // Clicked yes, download the map
+                val stylePackLoadOptions = StylePackLoadOptions.Builder()
+                    .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
+                    .metadata(Value(metadata))
+                    .build()
+
+                val offlineManager: OfflineManager = OfflineManager()
+
+                val tilesetDescriptor = offlineManager.createTilesetDescriptor(
+                    TilesetDescriptorOptions.Builder()
+                        .styleURI(Style.SATELLITE_STREETS)
+                        .minZoom(0)
+                        .maxZoom(16)
+                        .build()
+                )
+                val tileRegionLoadOptions = TileRegionLoadOptions.Builder()
+                    .geometry(Point.fromLngLat(long, lat))
+                    .descriptors(listOf(tilesetDescriptor))
+                    .acceptExpired(false)
+                    .networkRestriction(NetworkRestriction.NONE)
+                    .metadata(Value("region: $lat, $long, $zoom"))
+                    .build()
+
+
+                // Start downloading the region
+                val stylePackCancelable = offlineManager.loadStylePack(
+                    Style.OUTDOORS,
+                    // Build Style pack load options
+                    stylePackLoadOptions,
+                    { progress ->
+                        // Handle the download progress via toast message
+                        Toast.makeText(this, "Downloading style in progress...", Toast.LENGTH_SHORT)
                             .show()
-                        Log.d("Download", "Downloading style finished")
+                        Log.d("Download", "Downloading style progress: $progress")
+                    },
+                    { expected ->
+                        if (expected.isValue) {
+                            expected.value?.let { stylePack ->
+                                // Style pack download finished successfully via toast message
+                                Toast.makeText(
+                                    this,
+                                    "Downloading style finished",
+                                    Toast.LENGTH_SHORT
+                                )
+                                    .show()
+                                Log.d("Download", "Downloading style finished")
+                            }
+                        }
+                        expected.error?.let {
+                            // Handle errors that occurred during the style pack download via toast message
+                            Toast.makeText(this, "Downloading style error: $it", Toast.LENGTH_SHORT)
+                                .show()
+                            Log.d("Download", "Downloading style error: $it")
+                        }
+                    }
+                )
+                // Cancel the download if needed
+                stylePackCancelable.cancel()
+
+
+                val tileStore = TileStore.create()
+                val TILE_REGION_ID = "lat: $lat long: $long zoom: $zoom"
+                val tileRegionCancelable = tileStore.loadTileRegion(
+                    TILE_REGION_ID,
+                    TileRegionLoadOptions.Builder()
+                        .geometry(Point.fromLngLat(long, lat))
+                        .descriptors(listOf(tilesetDescriptor))
+                        .acceptExpired(false)
+                        .networkRestriction(NetworkRestriction.NONE)
+                        .build(),
+                    { progress ->
+                        // Handle the download progress via toast message
+                        Toast.makeText(
+                            this,
+                            "Downloading tiles progress: $progress",
+                            Toast.LENGTH_SHORT
+                        )
+                            .show()
+                        Log.d("Download", "Downloading tiles progress: $progress")
+                    }
+                ) { expected ->
+                    if (expected.isValue) {
+                        // Tile region download finishes successfully via toast message
+                        expected.value?.let {
+                            Toast.makeText(this, "Downloading tiles finished", Toast.LENGTH_SHORT)
+                                .show()
+                            Log.d("Download", "Downloading tiles finished")
+                        }
+                    }
+                    expected.error?.let {
+                        // Handle errors that occurred during the tile region download via toast message
+                        //Toast.makeText(this, "Downloading tiles error: $it", Toast.LENGTH_SHORT).show()
+                        Log.d("Download", "Downloading tiles error: $it")
                     }
                 }
-                expected.error?.let {
-                    // Handle errors that occurred during the style pack download via toast message
-                    Toast.makeText(this, "Downloading style error: $it", Toast.LENGTH_SHORT).show()
-                    Log.d("Download", "Downloading style error: $it")
-                }
-            }
-        )
-        // Cancel the download if needed
-        stylePackCancelable.cancel()
+
+                // Cancel the download if needed
+                tileRegionCancelable.cancel()
+
+                // Toast message
+                Toast.makeText(this, "Offline Download finished", Toast.LENGTH_LONG).show()
+
+                Log.d("Download", "Offline Download finished")
 
 
-        val tileStore = TileStore.create()
-        val TILE_REGION_ID = "lat: $lat long: $long zoom: $zoom"
-        val tileRegionCancelable = tileStore.loadTileRegion(
-            TILE_REGION_ID,
-            TileRegionLoadOptions.Builder()
-                .geometry(Point.fromLngLat(long, lat))
-                .descriptors(listOf(tilesetDescriptor))
-                .acceptExpired(false)
-                .networkRestriction(NetworkRestriction.NONE)
-                .build(),
-            { progress ->
-                // Handle the download progress via toast message
-                Toast.makeText(this, "Downloading tiles progress: $progress", Toast.LENGTH_SHORT)
-                    .show()
-                Log.d("Download", "Downloading tiles progress: $progress")
-            }
-        ) { expected ->
-            if (expected.isValue) {
-                // Tile region download finishes successfully via toast message
-                expected.value?.let {
-                    Toast.makeText(this, "Downloading tiles finished", Toast.LENGTH_SHORT).show()
-                    Log.d("Download", "Downloading tiles finished")
-                }
-            }
-            expected.error?.let {
-                // Handle errors that occurred during the tile region download via toast message
-                //Toast.makeText(this, "Downloading tiles error: $it", Toast.LENGTH_SHORT).show()
-                Log.d("Download", "Downloading tiles error: $it")
-            }
-        }
+            })
 
-// Cancel the download if needed
-        tileRegionCancelable.cancel()
+        builder1.setNegativeButton(
+            "No",
+            DialogInterface.OnClickListener { dialog, id -> dialog.cancel() })
 
-        // Toast message
-        Toast.makeText(this, "Offline Download finished", Toast.LENGTH_LONG).show()
-
-        Log.d("Download", "Offline Download finished")
+        val alert11: AlertDialog = builder1.create()
+        alert11.show()
 
 
     }
