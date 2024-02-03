@@ -114,10 +114,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         // Set dog location to random lat and long
         dogLocation = Location("")
-        dogLocation?.latitude = 35.144687
-        dogLocation?.longitude = -106.651482
-        path.addLocation(arrayOf(dogLocation!!.latitude, dogLocation!!.longitude))
-
+//        dogLocation?.latitude = 35.144687
+//        dogLocation?.longitude = -106.651482
+//        path.addLocation(arrayOf(dogLocation!!.latitude, dogLocation!!.longitude))
 
 
         mapView = findViewById(R.id.mapView)
@@ -504,10 +503,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             // Define a geographic coordinate.
             .withPoint(Point.fromLngLat(long, lat))
             // Style the circle that will be added to the map.
-            .withCircleRadius(8.0)
-            .withCircleColor("#BD93F9")
-            .withCircleStrokeWidth(2.0)
-            .withCircleStrokeColor("#FF79C6")
+            .withCircleRadius(4.0)
+            .withCircleColor("#FFB86C")
+            .withCircleStrokeWidth(1.0)
+            .withCircleStrokeColor("#F1FA8C")
 // Add the resulting circle to the map.
         circleAnnotationManager?.create(circleAnnotationOptions)
 
@@ -528,8 +527,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val polylineAnnotationOptions: PolylineAnnotationOptions = PolylineAnnotationOptions()
             .withPoints(points)
             // Style the line that will be added to the map.
-            .withLineColor("#BD93F9")
-            .withLineWidth(5.0)
+            .withLineColor("#FFB86C")
+            .withLineWidth(2.0)
         // Add the resulting line to the map.
         polylineAnnotationManager?.create(polylineAnnotationOptions)
 
@@ -593,6 +592,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     )
                 }
             }
+        } else if (path.getPath().size == 1) {
+            addLineAnnotationToMap(
+                path.getPath()[0][0],
+                path.getPath()[0][1],
+                path.getCurrentDogLocation()[0],
+                path.getCurrentDogLocation()[1]
+            )
         }
 
     }
