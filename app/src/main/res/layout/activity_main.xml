@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/colorAccent"
     tools:context=".MainActivity">
 
     <com.mapbox.maps.MapView xmlns:android="http://schemas.android.com/apk/res/android"
@@ -12,14 +13,14 @@
         android:id="@+id/mapView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        mapbox:mapbox_cameraTargetLat="35.087659"
-        mapbox:mapbox_cameraTargetLng="-106.651047"
+        mapbox:mapbox_cameraTargetLat="39.8283"
+        mapbox:mapbox_cameraTargetLng="98.5795"
         mapbox:mapbox_cameraZoom="9.0" />
 
     <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="#282a36"
+        android:background="@color/colorAccent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 

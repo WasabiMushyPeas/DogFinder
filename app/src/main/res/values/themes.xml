@@ -1,9 +1,16 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- Base application theme. -->
-    <style name="Base.Theme.DoggyFinderMapBox" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
         <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+
+        <!--        Default image tint color-->
+        <item name="android:tint">@color/colorPrimary</item>
+
+
     </style>
 
-    <style name="Theme.DoggyFinderMapBox" parent="Base.Theme.DoggyFinderMapBox" />
+    <!--    <style name="Theme.DoggyFinderMapBox" parent="Base.Theme.DoggyFinderMapBox" />-->
 </resources>

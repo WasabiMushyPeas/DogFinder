@@ -14,6 +14,7 @@
         android:layout_marginRight="20dp"
         android:layout_marginBottom="40dp"
         android:text="Heading: 0.0"
+        android:textColor="@color/colorAccent"
         android:textSize="30sp" />
 
     <TextView
@@ -23,6 +24,7 @@
         android:layout_below="@+id/tvHeading"
         android:layout_centerHorizontal="true"
         android:text="N/A"
+        android:textColor="@color/colorAccent"
         android:textSize="16sp"></TextView>
 
     <ImageView

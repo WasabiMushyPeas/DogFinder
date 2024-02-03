@@ -504,9 +504,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .withPoint(Point.fromLngLat(long, lat))
             // Style the circle that will be added to the map.
             .withCircleRadius(4.0)
-            .withCircleColor("#FFB86C")
+            .withCircleColor("#75be80")
             .withCircleStrokeWidth(1.0)
-            .withCircleStrokeColor("#F1FA8C")
+            .withCircleStrokeColor("#a8d6a7")
 // Add the resulting circle to the map.
         circleAnnotationManager?.create(circleAnnotationOptions)
 
@@ -527,7 +527,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val polylineAnnotationOptions: PolylineAnnotationOptions = PolylineAnnotationOptions()
             .withPoints(points)
             // Style the line that will be added to the map.
-            .withLineColor("#FFB86C")
+            .withLineColor("#75be80")
             .withLineWidth(2.0)
         // Add the resulting line to the map.
         polylineAnnotationManager?.create(polylineAnnotationOptions)
