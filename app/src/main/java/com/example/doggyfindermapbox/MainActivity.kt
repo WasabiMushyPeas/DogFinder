@@ -45,8 +45,12 @@ import com.mapbox.maps.Style
 import com.mapbox.maps.StylePackLoadOptions
 import com.mapbox.maps.TilesetDescriptorOptions
 import com.mapbox.maps.plugin.annotation.annotations
+import com.mapbox.maps.plugin.annotation.generated.CircleAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.createCircleAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.createPolylineAnnotationManager
 import com.mapbox.maps.plugin.locationcomponent.location
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -60,30 +64,19 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 
-var mapView: MapView? = null
-
-
-// Location text view, button, and Edit Text variables
-private var locationTextViewUserLat: TextView? = null
-private var locationTextViewUserLong: TextView? = null
-private var locationTextViewDogLat: TextView? = null
-private var locationTextViewDogLong: TextView? = null
-private var locationTextViewDistance: TextView? = null
-private var compassButton: Button? = null
-private var infoButton: Button? = null
-private var updateButton: Button? = null
-private var downloadvButton: Button? = null
-
-// Location variables
-private var fusedLocationProviderClient: FusedLocationProviderClient? = null
-private var currentLocation: Location? = null
-private var dogLocation: Location? = null
-private var distance: Double? = 0.0
-
-
 // Implement SensorEventListener
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
+    var mapView: MapView? = null
+
+
+    // Location variables
+    private var fusedLocationProviderClient: FusedLocationProviderClient? = null
+    private var currentLocation: Location? = null
+    private var dogLocation: Location? = null
+    private var distance: Double? = 0.0
+
+
     // Compass variables
     private var image: ImageView? = null
     private var currentDegree = 0f
@@ -91,6 +84,25 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var tvHeading: TextView? = null
     private var tvDistance: TextView? = null
     private var isCompassOpen = false
+
+    // Location text view, button, and Edit Text variables
+    private var locationTextViewUserLat: TextView? = null
+    private var locationTextViewUserLong: TextView? = null
+    private var locationTextViewDogLat: TextView? = null
+    private var locationTextViewDogLong: TextView? = null
+    private var locationTextViewDistance: TextView? = null
+    private var compassButton: Button? = null
+    private var infoButton: Button? = null
+    private var updateButton: Button? = null
+    private var downloadButton: Button? = null
+
+    // Path variables
+    private var path = dogPath()
+    private var annotationApi = mapView?.annotations
+    private var pointAnnotationManager = annotationApi?.createPointAnnotationManager()
+    var circleAnnotationManager = annotationApi?.createCircleAnnotationManager()
+    var polylineAnnotationManager = annotationApi?.createPolylineAnnotationManager()
+    var previousDogLocationAnnotation = pointAnnotationManager
 
 
     // --------------------------------------------------Map--------------------------------------------------
@@ -104,6 +116,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         dogLocation = Location("")
         dogLocation?.latitude = 35.144687
         dogLocation?.longitude = -106.651482
+        path.addLocation(arrayOf(dogLocation!!.latitude, dogLocation!!.longitude))
 
 
 
@@ -112,7 +125,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             Style.SATELLITE_STREETS,
             object : Style.OnStyleLoaded {
                 override fun onStyleLoaded(style: Style) {
-                    addAnnotationToMap(dogLocation?.latitude!!, dogLocation?.longitude!!)
                     mapView!!.location.updateSettings {
                         this.enabled = true
                         this.pulsingEnabled = true
@@ -129,73 +141,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         compassButton = findViewById(R.id.compass_button)
         infoButton = findViewById(R.id.info_button)
         updateButton = findViewById(R.id.update_button)
-        downloadvButton = findViewById(R.id.download_button)
+        downloadButton = findViewById(R.id.download_button)
 
 
         setupButtons()
         onButtonUpdateLocationClick()
 
-
-    }
-
-    private fun onButtonUpdateLocationClick() {
-        // Check android version
-        // Check if permission to access location is granted
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // If permission not granted, request permission
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
-                1
-            )
-        } else {
-            // If permission granted, get location
-            // Check if GPS is enabled
-            val locationManager =
-                getSystemService(LOCATION_SERVICE) as LocationManager
-            if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                // Set current location to location variable
-                currentLocation =
-                    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-
-                // Update location text views
-                locationTextViewUserLat?.text = currentLocation?.latitude.toString()
-                locationTextViewUserLong?.text = currentLocation?.longitude.toString()
-                locationTextViewDogLat?.text = dogLocation?.latitude.toString()
-                locationTextViewDogLong?.text = dogLocation?.longitude.toString()
-
-                var currentLocation =
-                    Point.fromLngLat(currentLocation?.longitude!!, currentLocation?.latitude!!)
-
-                // Set camera position to current location
-                val cameraPosition = CameraOptions.Builder()
-                    .center(currentLocation)
-                    .zoom(15.0)
-                    .build()
-                mapView?.getMapboxMap()?.setCamera(cameraPosition)
-                // move maker marker to dog location
-                addAnnotationToMap(dogLocation?.latitude!!, dogLocation?.longitude!!)
-
-
-                // Calculate distance between user and dog
-                distance = distance(
-                    currentLocation.latitude(),
-                    currentLocation.longitude(),
-                    dogLocation?.latitude!!,
-                    dogLocation?.longitude!!
-                )
-
-                // Update distance text view rounded
-                locationTextViewDistance?.text = distance!!.roundToInt().toString() + "m"
-            } else {
-                // Send toast to user to enable GPS
-                Toast.makeText(this, "Please enable GPS", Toast.LENGTH_SHORT).show()
-            }
-        }
 
     }
 
@@ -340,6 +291,76 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     }
 
+
+    private fun onButtonUpdateLocationClick() {
+        // Check android version
+        // Check if permission to access location is granted
+
+        // --------------------------------------------------GPS--------------------------------------------------
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // If permission not granted, request permission
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
+                1
+            )
+        } else {
+            // If permission granted, get location
+            // Check if GPS is enabled
+            val locationManager =
+                getSystemService(LOCATION_SERVICE) as LocationManager
+            if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                // Set current location to location variable
+                currentLocation =
+                    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+
+                // Update location text views
+                locationTextViewUserLat?.text = currentLocation?.latitude.toString()
+                locationTextViewUserLong?.text = currentLocation?.longitude.toString()
+                locationTextViewDogLat?.text = dogLocation?.latitude.toString()
+                locationTextViewDogLong?.text = dogLocation?.longitude.toString()
+
+                var currentLocation =
+                    Point.fromLngLat(currentLocation?.longitude!!, currentLocation?.latitude!!)
+
+
+                // Calculate distance between user and dog
+                distance = distance(
+                    currentLocation.latitude(),
+                    currentLocation.longitude(),
+                    dogLocation?.latitude!!,
+                    dogLocation?.longitude!!
+                )
+
+                // Update distance text view rounded
+                locationTextViewDistance?.text = distance!!.roundToInt().toString() + "m"
+            } else {
+                // Send toast to user to enable GPS
+                Toast.makeText(this, "Please enable GPS", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+
+        // --------------------------------------------------Path--------------------------------------------------
+        dogLocation = randomDogLocation(currentLocation!!)
+        path.addLocation(arrayOf(dogLocation!!.latitude, dogLocation!!.longitude))
+        annotatePath()
+
+        Log.d("Path", "Path: ${path.getPath()}")
+        // Set camera position to current location
+        val cameraPosition = CameraOptions.Builder()
+            .center(Point.fromLngLat(currentLocation?.longitude!!, currentLocation?.latitude!!))
+            .zoom(15.0)
+            .build()
+        mapView?.getMapboxMap()?.setCamera(cameraPosition)
+
+
+    }
+
     private fun setupButtons() {
 
 
@@ -455,12 +476,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun addAnnotationToMap(lat: Double, long: Double) {
         // Create an instance of the Annotation API and get the PointAnnotationManager.
+        annotationApi = mapView?.annotations
+        pointAnnotationManager = annotationApi?.createPointAnnotationManager()
         bitmapFromDrawableRes(
             this@MainActivity,
             R.drawable.red_marker
         )?.let {
-            val annotationApi = mapView?.annotations
-            val pointAnnotationManager = annotationApi?.createPointAnnotationManager()
             // Set options for the resulting symbol layer.
             val pointAnnotationOptions: PointAnnotationOptions = PointAnnotationOptions()
                 // Define a geographic coordinate.
@@ -470,7 +491,52 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 .withIconImage(it)
             // Add the resulting pointAnnotation to the map.
             pointAnnotationManager?.create(pointAnnotationOptions)
+            previousDogLocationAnnotation = pointAnnotationManager
         }
+        Log.d("Annotation", "Added annotation to map at lat: $lat, long: $long")
+    }
+
+    private fun addCircleAnnotationToMap(lat: Double, long: Double) {
+        annotationApi = mapView?.annotations
+        circleAnnotationManager = annotationApi?.createCircleAnnotationManager()
+        // Create an instance of the Annotation API and get the PointAnnotationManager.
+        val circleAnnotationOptions: CircleAnnotationOptions = CircleAnnotationOptions()
+            // Define a geographic coordinate.
+            .withPoint(Point.fromLngLat(long, lat))
+            // Style the circle that will be added to the map.
+            .withCircleRadius(8.0)
+            .withCircleColor("#BD93F9")
+            .withCircleStrokeWidth(2.0)
+            .withCircleStrokeColor("#FF79C6")
+// Add the resulting circle to the map.
+        circleAnnotationManager?.create(circleAnnotationOptions)
+
+        Log.d("Annotation", "Added circle annotation to map at lat: $lat, long: $long")
+    }
+
+    private fun addLineAnnotationToMap(lat1: Double, long1: Double, lat2: Double, long2: Double) {
+        annotationApi = mapView?.annotations
+        if (annotationApi != null) {
+            polylineAnnotationManager = annotationApi!!.createPolylineAnnotationManager()
+        }
+
+        val points = listOf(
+            Point.fromLngLat(long1, lat1),
+            Point.fromLngLat(long2, lat2)
+        )
+        // Set options for the resulting line layer.
+        val polylineAnnotationOptions: PolylineAnnotationOptions = PolylineAnnotationOptions()
+            .withPoints(points)
+            // Style the line that will be added to the map.
+            .withLineColor("#BD93F9")
+            .withLineWidth(5.0)
+        // Add the resulting line to the map.
+        polylineAnnotationManager?.create(polylineAnnotationOptions)
+
+        Log.d(
+            "Annotation",
+            "Added line annotation to map at lat1: $lat1, long1: $long1, lat2: $lat2, long2: $long2"
+        )
     }
 
     private fun bitmapFromDrawableRes(context: Context, @DrawableRes resourceId: Int) =
@@ -494,6 +560,39 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             drawable.setBounds(0, 0, canvas.width, canvas.height)
             drawable.draw(canvas)
             bitmap
+        }
+
+    }
+
+    fun annotatePath() {
+        if (previousDogLocationAnnotation == null) {
+            addAnnotationToMap(dogLocation?.latitude!!, dogLocation?.longitude!!)
+        } else {
+            mapView?.annotations?.removeAnnotationManager(previousDogLocationAnnotation!!)
+            addAnnotationToMap(path.getCurrentDogLocation()[0], path.getCurrentDogLocation()[1])
+        }
+
+        for (location in path.getPath()) {
+            addCircleAnnotationToMap(location[0], location[1])
+        }
+
+        if (path.getPath().size > 1) {
+            for (i in 0 until path.getPath().size - 1) {
+                addLineAnnotationToMap(
+                    path.getPath()[i][0],
+                    path.getPath()[i][1],
+                    path.getPath()[i + 1][0],
+                    path.getPath()[i + 1][1]
+                )
+                if (i == path.getPath().size - 2) {
+                    addLineAnnotationToMap(
+                        path.getPath()[i + 1][0],
+                        path.getPath()[i + 1][1],
+                        path.getCurrentDogLocation()[0],
+                        path.getCurrentDogLocation()[1]
+                    )
+                }
+            }
         }
 
     }
@@ -751,6 +850,21 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         alert11.show()
 
 
+    }
+
+
+    // --------------------------------------------------Path--------------------------------------------------
+
+    fun randomDogLocation(location: Location): Location {
+        // Set dog location to random lat and long within 1 mile of user location
+        val dogTempLocation = Location("")
+        val random = java.util.Random()
+        val lat = location.latitude + (random.nextDouble() - 0.5) / 100
+        val long = location.longitude + (random.nextDouble() - 0.5) / 100
+        dogTempLocation.latitude = lat
+        dogTempLocation.longitude = long
+        Log.d("Dog Location", "Lat: $lat, Long: $long")
+        return dogTempLocation
     }
 
 
