@@ -680,7 +680,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
         // toast message
-        Toast.makeText(this, "Compass accuracy changed", Toast.LENGTH_SHORT).show()
+        //Toast.makeText(this, "Compass accuracy changed", Toast.LENGTH_SHORT).show()
 
     }
 
