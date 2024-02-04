@@ -33,8 +33,8 @@
 
                 <Button
                     android:id="@+id/info_button"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="35dp"
+                    android:layout_height="35dp"
                     android:layout_margin="10dp"
                     android:background="@drawable/info" />
             </TableRow>
@@ -43,8 +43,8 @@
 
                 <Button
                     android:id="@+id/compass_button"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="35dp"
+                    android:layout_height="35dp"
                     android:layout_margin="10dp"
                     android:background="@drawable/c" />
             </TableRow>
@@ -53,8 +53,8 @@
 
                 <Button
                     android:id="@+id/update_button"
-                    android:layout_width="35dp"
-                    android:layout_height="35dp"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
                     android:layout_margin="10dp"
                     android:background="@drawable/reload" />
             </TableRow>
@@ -64,8 +64,8 @@
 
                 <Button
                     android:id="@+id/download_button"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="35dp"
+                    android:layout_height="35dp"
                     android:layout_margin="10dp"
                     android:background="@drawable/download" />
             </TableRow>
