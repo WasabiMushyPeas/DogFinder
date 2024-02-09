@@ -7,7 +7,7 @@
         <item name="colorAccent">@color/colorAccent</item>
 
         <!--        Default image tint color-->
-        <item name="android:tint">@color/colorPrimary</item>
+        <!--        <item name="android:tint">@color/colorPrimary</item>-->
 
 
     </style>

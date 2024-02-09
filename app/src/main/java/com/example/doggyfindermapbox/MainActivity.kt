@@ -479,7 +479,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         pointAnnotationManager = annotationApi?.createPointAnnotationManager()
         bitmapFromDrawableRes(
             this@MainActivity,
-            R.drawable.red_marker
+            R.drawable.green_marker
         )?.let {
             // Set options for the resulting symbol layer.
             val pointAnnotationOptions: PointAnnotationOptions = PointAnnotationOptions()

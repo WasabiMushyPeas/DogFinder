@@ -1,20 +1,20 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="#282a36">
+    android:background="@drawable/rounded_corners">
 
     <TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="30dp">
+        android:layout_margin="40dp">
 
         <TableRow>
 
             <TextView
                 android:layout_column="1"
-                android:text="Info: "
+                android:text="Info"
                 android:textColor="@color/colorAccent"
-                android:textSize="20sp" />
+                android:textSize="36sp" />
         </TableRow>
 
         <TableRow>
@@ -24,7 +24,7 @@
                 android:layout_column="1"
                 android:text="Distance:"
                 android:textColor="@color/colorAccent"
-                android:textSize="12sp"></TextView>
+                android:textSize="18sp"></TextView>
 
             <TextView
                 android:id="@+id/location_text_view_distance"
@@ -32,7 +32,7 @@
                 android:layout_column="2"
                 android:text="N/A"
                 android:textColor="@color/colorAccent"
-                android:textSize="12sp"></TextView>
+                android:textSize="18sp"></TextView>
         </TableRow>
 
         <TableRow>
@@ -42,14 +42,14 @@
                 android:layout_column="1"
                 android:text="Battery:"
                 android:textColor="@color/colorAccent"
-                android:textSize="12sp"></TextView>
+                android:textSize="18sp"></TextView>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_column="2"
                 android:text="N/A"
                 android:textColor="@color/colorAccent"
-                android:textSize="12sp"></TextView>
+                android:textSize="18sp"></TextView>
         </TableRow>
 
         <TableRow>
@@ -59,7 +59,7 @@
                 android:layout_column="1"
                 android:text="Dog Lat:"
                 android:textColor="@color/colorAccent"
-                android:textSize="12sp"></TextView>
+                android:textSize="18sp"></TextView>
 
             <TextView
                 android:id="@+id/location_text_view_dog_lat"
@@ -67,7 +67,7 @@
                 android:layout_column="2"
                 android:text="N/A"
                 android:textColor="@color/colorAccent"
-                android:textSize="12sp"></TextView>
+                android:textSize="18sp"></TextView>
         </TableRow>
 
         <TableRow>
@@ -77,7 +77,7 @@
                 android:layout_column="1"
                 android:text="Dog Lon:"
                 android:textColor="@color/colorAccent"
-                android:textSize="12sp"></TextView>
+                android:textSize="18sp"></TextView>
 
             <TextView
                 android:id="@+id/location_text_view_dog_long"
@@ -85,7 +85,7 @@
                 android:layout_column="2"
                 android:text="N/A"
                 android:textColor="@color/colorAccent"
-                android:textSize="12sp"></TextView>
+                android:textSize="18sp"></TextView>
         </TableRow>
 
         <TableRow>
@@ -95,7 +95,7 @@
                 android:layout_column="1"
                 android:text="User Lat:"
                 android:textColor="@color/colorAccent"
-                android:textSize="12sp"></TextView>
+                android:textSize="18sp"></TextView>
 
             <TextView
                 android:id="@+id/location_text_view_user_lat"
@@ -103,7 +103,7 @@
                 android:layout_column="2"
                 android:text="N/A"
                 android:textColor="@color/colorAccent"
-                android:textSize="12sp"></TextView>
+                android:textSize="18sp"></TextView>
         </TableRow>
 
         <TableRow>
@@ -113,7 +113,7 @@
                 android:layout_column="1"
                 android:text="User Lon:"
                 android:textColor="@color/colorAccent"
-                android:textSize="12sp"></TextView>
+                android:textSize="18sp"></TextView>
 
             <TextView
                 android:id="@+id/location_text_view_user_long"
@@ -121,7 +121,7 @@
                 android:layout_column="2"
                 android:text="N/A"
                 android:textColor="@color/colorAccent"
-                android:textSize="12sp"></TextView>
+                android:textSize="18sp"></TextView>
         </TableRow>
     </TableLayout>
 </RelativeLayout>
